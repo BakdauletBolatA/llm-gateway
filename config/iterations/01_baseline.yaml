@@ -1,0 +1,14 @@
+# Итерация 1 — намеренно наивный шлюз.
+# Один провайдер, без таймаутов, без ретраев, без circuit breaker,
+# без fallback и без кэша. Это точка отсчёта для всех остальных строк отчёта.
+reliability:
+  timeouts:
+    enabled: false
+  retries:
+    enabled: false
+  circuit_breaker:
+    enabled: false
+  fallback:
+    enabled: false
+  cache:
+    enabled: false

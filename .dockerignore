@@ -1,0 +1,11 @@
+.git/
+.venv/
+.run/
+bench/results/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.env
+*.log

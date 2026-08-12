@@ -1,0 +1,186 @@
+# Базовая конфигурация шлюза.
+#
+# Значения вида ${VAR:-default} подставляются из окружения при загрузке.
+# Любое поле переопределяется переменной окружения с префиксом GW__ и разделителем __:
+#   GW__RELIABILITY__RETRIES__ENABLED=true
+#   GW__BUDGET__LIMIT_USD=0.5
+# Оверлеи итераций лежат в config/iterations/*.yaml и применяются через
+# GATEWAY_CONFIG_OVERLAY=config/iterations/03_retries.yaml
+
+app:
+  name: llm-gateway
+  log_level: ${LOG_LEVEL:-INFO}
+  # Порог, после которого запрос считается «медленным» и логируется отдельно.
+  slow_request_ms: 5000
+
+database:
+  dsn: ${DATABASE_URL:-postgresql+asyncpg://gateway:gateway@postgres:5432/llm_gateway}
+  pool_size: 10
+  max_overflow: 10
+  # Логирование вызовов не должно ронять запрос: пишем через фоновую очередь.
+  recorder_queue_size: 10000
+  recorder_batch_size: 50
+  recorder_flush_interval_s: 0.25
+  run_migrations_on_startup: true
+
+auth:
+  # Если список пуст — шлюз открыт (удобно для локального запуска и хаос-прогонов).
+  # Ключ можно задать литералом или через ${ENV_VAR}.
+  keys: []
+  # Пример:
+  # keys:
+  #   - id: team-alpha
+  #     key: ${GATEWAY_KEY_ALPHA}
+  #     budget_limit_usd: 1.0
+
+budget:
+  enabled: true
+  period: day            # day | month
+  limit_usd: 25.0
+  # Как часто перечитывать фактические расходы из Postgres (in-memory счётчик
+  # инкрементится сразу, БД — источник истины при перезапуске и для нескольких реплик).
+  refresh_interval_s: 5.0
+  # Оценка стоимости запроса до вызова провайдера, чтобы не пробить лимит «в минус».
+  estimate_output_tokens: 512
+
+reliability:
+  timeouts:
+    enabled: false
+    connect_s: 2.0
+    read_s: 8.0
+    write_s: 5.0
+    total_s: 12.0
+
+  retries:
+    enabled: false
+    max_attempts: 3          # суммарно попыток на одного провайдера, не «дополнительных»
+    base_delay_ms: 120
+    max_delay_ms: 2000
+    jitter: full             # none | full | equal
+    respect_retry_after: true
+    max_retry_after_s: 3.0
+    retry_on:
+      - timeout
+      - connection
+      - rate_limited
+      - server_error
+      - overloaded
+      - invalid_response
+
+  circuit_breaker:
+    enabled: false
+    window_s: 10.0
+    min_calls: 8             # меньше — окно считается непоказательным
+    failure_ratio: 0.5
+    cooldown_s: 4.0
+    half_open_max_calls: 2
+
+  fallback:
+    enabled: false
+    max_providers: 3         # сколько звеньев цепочки маршрута использовать
+
+  cache:
+    enabled: false
+    # Порог выбран по замеру, а не на глаз: см. scripts/calibrate_cache_threshold.py.
+    # Для хеш-эмбеддера максимальная похожесть двух РАЗНЫХ вопросов — 0.539,
+    # поэтому 0.60 даёт запас и ноль ответов не на тот вопрос на нашем воркладе.
+    # Для эмбеддера ollama порог нужно перекалибровать (обычно 0.85–0.95).
+    similarity_threshold: 0.60
+    ttl_s: 900
+    max_temperature: 0.3     # выше — запрос считается «творческим», не кэшируем
+    embedding_dim: 256
+    candidate_limit: 5
+    embedder: hashing        # hashing | ollama
+    ollama_embed_model: nomic-embed-text
+
+providers:
+  # --- Мок-провайдер: три независимых апстрима, три разных диалекта API. ---
+  mock_primary:
+    type: openai
+    base_url: ${MOCK_BASE_URL:-http://mock:8081}/p/primary
+    enabled: true
+  mock_secondary:
+    type: anthropic
+    base_url: ${MOCK_BASE_URL:-http://mock:8081}/p/secondary
+    enabled: true
+  mock_tertiary:
+    type: ollama
+    base_url: ${MOCK_BASE_URL:-http://mock:8081}/p/tertiary
+    enabled: true
+
+  # --- Реальные провайдеры. Выключены по умолчанию: без ключей система работает на моке. ---
+  openai:
+    type: openai
+    base_url: ${OPENAI_BASE_URL:-https://api.openai.com}
+    api_key_env: OPENAI_API_KEY
+    enabled: ${OPENAI_ENABLED:-false}
+  anthropic:
+    type: anthropic
+    base_url: ${ANTHROPIC_BASE_URL:-https://api.anthropic.com}
+    api_key_env: ANTHROPIC_API_KEY
+    enabled: ${ANTHROPIC_ENABLED:-false}
+  ollama:
+    type: ollama
+    base_url: ${OLLAMA_BASE_URL:-http://ollama:11434}
+    enabled: ${OLLAMA_ENABLED:-false}
+
+routes:
+  default: chaos-default
+  definitions:
+    # Маршрут для хаос-прогонов: цепочка пересекает три диалекта API.
+    chaos-default:
+      chain:
+        - provider: mock_primary
+          model: mock-gpt-4o-mini
+        - provider: mock_secondary
+          model: mock-claude-haiku
+        - provider: mock_tertiary
+          model: mock-llama-3.2
+    # Маршрут «как в проде»: платные провайдеры с деградацией на локальную Ollama.
+    production:
+      chain:
+        - provider: openai
+          model: gpt-4o-mini
+        - provider: anthropic
+          model: claude-haiku-4-5
+        - provider: ollama
+          model: llama3.2
+    # Только локальная модель — работает без единого платного ключа.
+    local-only:
+      chain:
+        - provider: ollama
+          model: llama3.2
+
+# Цены в USD за 1M токенов. Значения для платных провайдеров — по состоянию на 2026-08,
+# сверяйте с прайс-листом провайдера перед продовым использованием.
+# Ключ: "<provider>:<model>" либо просто "<model>".
+pricing:
+  default:
+    input_per_mtok: 0.0
+    output_per_mtok: 0.0
+  models:
+    "gpt-4o-mini":
+      input_per_mtok: 0.15
+      output_per_mtok: 0.60
+    "gpt-4o":
+      input_per_mtok: 2.50
+      output_per_mtok: 10.00
+    "claude-haiku-4-5":
+      input_per_mtok: 1.00
+      output_per_mtok: 5.00
+    "claude-sonnet-5":
+      input_per_mtok: 3.00
+      output_per_mtok: 15.00
+    "llama3.2":
+      input_per_mtok: 0.0
+      output_per_mtok: 0.0
+    # Синтетические цены мока — чтобы стоимость в отчёте была не нулевой.
+    "mock-gpt-4o-mini":
+      input_per_mtok: 0.15
+      output_per_mtok: 0.60
+    "mock-claude-haiku":
+      input_per_mtok: 1.00
+      output_per_mtok: 5.00
+    "mock-llama-3.2":
+      input_per_mtok: 0.0
+      output_per_mtok: 0.0

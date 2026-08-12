@@ -1,0 +1,101 @@
+# docker compose up  -> postgres + mock provider + gateway.
+# Работает без единого платного ключа: маршрут chaos-default ходит только в мок.
+#
+# Ollama выключена по умолчанию (образ и модель весят гигабайты):
+#   docker compose --profile ollama up
+# и затем маршрут local-only / production будет использовать локальную модель.
+
+name: llm-gateway
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: gateway
+      POSTGRES_PASSWORD: gateway
+      POSTGRES_DB: llm_gateway
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gateway -d llm_gateway"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  mock:
+    build: .
+    command:
+      - uvicorn
+      - mock_provider.main:create_app
+      - --factory
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8081"
+    environment:
+      PORT: "8081"
+      FAILURE_PROFILES: config/failure_profiles.yaml
+      MOCK_SCENARIO: ${MOCK_SCENARIO:-healthy}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    ports:
+      - "${MOCK_PORT:-8081}:8081"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8081/healthz || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  gateway:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+asyncpg://gateway:gateway@postgres:5432/llm_gateway
+      MOCK_BASE_URL: http://mock:8081
+      OLLAMA_BASE_URL: http://ollama:11434
+      GATEWAY_CONFIG: ${GATEWAY_CONFIG:-config/gateway.yaml}
+      GATEWAY_CONFIG_OVERLAY: ${GATEWAY_CONFIG_OVERLAY:-}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      # Реальные провайдеры включаются только если ключи заданы в .env
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_ENABLED: ${OPENAI_ENABLED:-false}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_ENABLED: ${ANTHROPIC_ENABLED:-false}
+      OLLAMA_ENABLED: ${OLLAMA_ENABLED:-false}
+    ports:
+      - "${GATEWAY_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mock:
+        condition: service_healthy
+
+  # --- профиль ollama: локальная модель без единого платного ключа ---
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["ollama"]
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ollama:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  ollama-pull:
+    image: ollama/ollama:latest
+    profiles: ["ollama"]
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["ollama"]
+    command: ["pull", "${OLLAMA_MODEL:-llama3.2}"]
+    restart: "no"
+
+volumes:
+  pgdata:
+  ollama:
