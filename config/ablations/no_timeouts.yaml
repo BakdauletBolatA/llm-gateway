@@ -1,0 +1,4 @@
+# Финальная конфигурация без таймаутов.
+reliability:
+  timeouts:
+    enabled: false

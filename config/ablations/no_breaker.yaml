@@ -1,0 +1,4 @@
+# Финальная конфигурация без circuit breaker.
+reliability:
+  circuit_breaker:
+    enabled: false

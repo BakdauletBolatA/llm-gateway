@@ -1,0 +1,4 @@
+# Финальная конфигурация без ретраев.
+reliability:
+  retries:
+    enabled: false
