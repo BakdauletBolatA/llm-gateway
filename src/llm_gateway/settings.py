@@ -86,6 +86,31 @@ class HedgingConfig(BaseModel):
         return self.delay_ms / 1000.0
 
 
+class BulkheadConfig(BaseModel):
+    """Limit on calls in flight to one provider.
+
+    The breaker watches for a provider that fails; this watches for one that is
+    full. `queue_timeout_ms` is how long a request may wait for a slot before it is
+    shed to the next provider — always additionally bounded by the request deadline.
+    """
+
+    enabled: bool = False
+    max_concurrent_per_provider: int = Field(default=8, ge=1)
+    queue_timeout_ms: int = Field(default=2000, ge=0)
+
+    @property
+    def queue_timeout_s(self) -> float:
+        return self.queue_timeout_ms / 1000.0
+
+
+class RateLimitConfig(BaseModel):
+    """Token bucket per API key, or one shared bucket when auth is off."""
+
+    enabled: bool = False
+    requests_per_second: float = Field(default=50.0, gt=0.0)
+    burst: int = Field(default=100, ge=1)
+
+
 class CacheConfig(BaseModel):
     enabled: bool = False
     similarity_threshold: float = Field(default=0.93, gt=0.0, le=1.0)
@@ -103,6 +128,8 @@ class ReliabilityConfig(BaseModel):
     circuit_breaker: CircuitBreakerConfig = Field(default_factory=CircuitBreakerConfig)
     fallback: FallbackConfig = Field(default_factory=FallbackConfig)
     hedging: HedgingConfig = Field(default_factory=HedgingConfig)
+    bulkhead: BulkheadConfig = Field(default_factory=BulkheadConfig)
+    rate_limit: RateLimitConfig = Field(default_factory=RateLimitConfig)
     cache: CacheConfig = Field(default_factory=CacheConfig)
 
     @model_validator(mode="after")
@@ -129,6 +156,8 @@ class ReliabilityConfig(BaseModel):
             "circuit_breaker": self.circuit_breaker.model_dump(),
             "fallback": self.fallback.model_dump(),
             "hedging": self.hedging.model_dump(),
+            "bulkhead": self.bulkhead.model_dump(),
+            "rate_limit": self.rate_limit.model_dump(),
             "cache": self.cache.model_dump(),
         }
 
@@ -138,6 +167,10 @@ class ProviderConfig(BaseModel):
     base_url: str
     api_key_env: str | None = None
     enabled: bool = True
+    #: Квота конкурентности именно этого провайдера. У разных провайдеров она разная,
+    #: поэтому один общий лимит — компромисс: здесь его можно переопределить.
+    #: None — берётся reliability.bulkhead.max_concurrent_per_provider.
+    max_concurrent: int | None = Field(default=None, ge=1)
 
     @property
     def api_key(self) -> str | None:

@@ -29,6 +29,10 @@ reliability:
     enabled: true
     delay_ms: 400
     max_in_flight: 2
+  bulkhead:
+    enabled: false
+  rate_limit:
+    enabled: false
   cache:
     enabled: true
     similarity_threshold: 0.60

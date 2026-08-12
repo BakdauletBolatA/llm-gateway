@@ -3,8 +3,8 @@
   "scenario": "storm",
   "route": "chaos-default",
   "note": "выключены ретраи",
-  "started_at": "2026-08-12T12:46:34.856728+00:00",
-  "duration_s": 1.48,
+  "started_at": "2026-08-12T22:30:19.965972+00:00",
+  "duration_s": 1.14,
   "concurrency": 15,
   "client_timeout_s": 20.0,
   "workload": {
@@ -21,41 +21,41 @@
     "failures": 0,
     "success_rate": 1.0,
     "latency_ms": {
-      "p50": 95.0,
-      "p95": 279.5,
-      "p99": 402.1,
-      "mean": 131.4,
-      "max": 407.0,
-      "min": 38.2
+      "p50": 58.4,
+      "p95": 240.3,
+      "p99": 346.1,
+      "mean": 100.6,
+      "max": 355.0,
+      "min": 22.3
     },
     "latency_ms_success_only": {
-      "p50": 95.0,
-      "p95": 279.5,
-      "p99": 402.1,
-      "mean": 131.4,
-      "max": 407.0,
-      "min": 38.2
+      "p50": 58.4,
+      "p95": 240.3,
+      "p99": 346.1,
+      "mean": 100.6,
+      "max": 355.0,
+      "min": 22.3
     },
-    "attempts_total": 70,
+    "attempts_total": 69,
     "retries_total": 0,
-    "fallbacks_total": 54,
-    "breaker_skips_total": 44,
+    "fallbacks_total": 53,
+    "breaker_skips_total": 43,
     "hedges_total": 0,
     "hedged_requests": 0,
-    "cache_hits": 90,
-    "cache_hit_rate": 0.6,
-    "cost_usd_client": 0.028058,
+    "cache_hits": 91,
+    "cache_hit_rate": 0.6067,
+    "cost_usd_client": 0.027343,
     "cost_usd_wasted": 0.0,
     "outcomes": {
       "success": 150
     },
     "error_kinds": {},
     "providers_used": {
-      "mock_primary": 40,
-      "mock_secondary": 110
+      "mock_primary": 58,
+      "mock_secondary": 92
     },
-    "throughput_rps": 101.65,
-    "cost_usd_server": 0.028058
+    "throughput_rps": 131.2,
+    "cost_usd_server": 0.027343
   },
   "gateway_config": {
     "reliability": {
@@ -99,6 +99,16 @@
         "enabled": true,
         "delay_ms": 400,
         "max_in_flight": 2
+      },
+      "bulkhead": {
+        "enabled": true,
+        "max_concurrent_per_provider": 16,
+        "queue_timeout_ms": 2000
+      },
+      "rate_limit": {
+        "enabled": true,
+        "requests_per_second": 200.0,
+        "burst": 400
       },
       "cache": {
         "enabled": true,
@@ -197,15 +207,15 @@
         "state": "open",
         "window_calls": 8,
         "failure_ratio": 0.5,
-        "cooldown_remaining_s": 2.732,
+        "cooldown_remaining_s": 3.039,
         "opened_count": 1,
-        "short_circuited": 44
+        "short_circuited": 43
       },
       {
         "provider": "mock_secondary",
         "enabled": true,
         "state": "closed",
-        "window_calls": 54,
+        "window_calls": 53,
         "failure_ratio": 0.0,
         "cooldown_remaining_s": 0.0,
         "opened_count": 0,
@@ -222,21 +232,65 @@
         "short_circuited": 0
       }
     ],
+    "bulkheads": [
+      {
+        "provider": "mock_primary",
+        "limit": 16,
+        "in_flight": 0,
+        "admitted": 16,
+        "queued": 0,
+        "shed": 0,
+        "peak_in_flight": 15,
+        "avg_queue_wait_ms": 0.0
+      },
+      {
+        "provider": "mock_secondary",
+        "limit": 16,
+        "in_flight": 0,
+        "admitted": 53,
+        "queued": 0,
+        "shed": 0,
+        "peak_in_flight": 11,
+        "avg_queue_wait_ms": 0.0
+      },
+      {
+        "provider": "mock_tertiary",
+        "limit": 16,
+        "in_flight": 0,
+        "admitted": 0,
+        "queued": 0,
+        "shed": 0,
+        "peak_in_flight": 0,
+        "avg_queue_wait_ms": 0.0
+      }
+    ],
+    "rate_limit": {
+      "enabled": true,
+      "requests_per_second": 200.0,
+      "burst": 400,
+      "scopes": {
+        "__global__": {
+          "tokens": 396.04,
+          "allowed": 150,
+          "throttled": 0
+        }
+      }
+    },
     "cache": {
       "enabled": true,
       "embedder": "hashing",
       "lookups": 150,
-      "hits": 90,
-      "stores": 60,
+      "hits": 91,
+      "stores": 59,
       "errors": 0,
-      "hit_rate": 0.6
+      "hit_rate": 0.6067
     },
     "budget": {
       "period": "day",
       "period_start": "2026-08-12T00:00:00+00:00",
       "limit_usd": 25.0,
-      "spent_usd": 1.21534,
-      "remaining_usd": 23.78466,
+      "spent_usd": 2.447901,
+      "remaining_usd": 22.552099,
       "per_key": {}
     },
     "recorder": {
@@ -262,17 +316,23 @@
           "http_500": 1,
           "http_503": 4,
           "ok": 6
-        }
+        },
+        "max_concurrency": 0,
+        "peak_in_flight": 15,
+        "rejected_overload": 0
       },
       {
         "upstream": "secondary",
         "profile": "healthy",
-        "served": 54,
+        "served": 53,
         "deck_size": 100,
-        "cursor": 54,
+        "cursor": 53,
         "counts": {
-          "ok": 54
-        }
+          "ok": 53
+        },
+        "max_concurrency": 0,
+        "peak_in_flight": 10,
+        "rejected_overload": 0
       },
       {
         "upstream": "tertiary",
@@ -280,7 +340,10 @@
         "served": 0,
         "deck_size": 100,
         "cursor": 0,
-        "counts": {}
+        "counts": {},
+        "max_concurrency": 0,
+        "peak_in_flight": 0,
+        "rejected_overload": 0
       }
     ]
   },

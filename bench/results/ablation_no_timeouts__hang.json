@@ -3,8 +3,8 @@
   "scenario": "hang",
   "route": "chaos-default",
   "note": "выключены таймауты",
-  "started_at": "2026-08-12T12:46:06.427199+00:00",
-  "duration_s": 1.84,
+  "started_at": "2026-08-12T22:29:52.812560+00:00",
+  "duration_s": 1.42,
   "concurrency": 15,
   "client_timeout_s": 20.0,
   "workload": {
@@ -21,30 +21,30 @@
     "failures": 0,
     "success_rate": 1.0,
     "latency_ms": {
-      "p50": 75.3,
-      "p95": 550.1,
-      "p99": 621.9,
-      "mean": 133.0,
-      "max": 630.7,
-      "min": 8.1
+      "p50": 38.1,
+      "p95": 502.3,
+      "p99": 538.0,
+      "mean": 106.1,
+      "max": 561.4,
+      "min": 7.1
     },
     "latency_ms_success_only": {
-      "p50": 75.3,
-      "p95": 550.1,
-      "p99": 621.9,
-      "mean": 133.0,
-      "max": 630.7,
-      "min": 8.1
+      "p50": 38.1,
+      "p95": 502.3,
+      "p99": 538.0,
+      "mean": 106.1,
+      "max": 561.4,
+      "min": 7.1
     },
-    "attempts_total": 72,
+    "attempts_total": 77,
     "retries_total": 0,
-    "fallbacks_total": 12,
+    "fallbacks_total": 14,
     "breaker_skips_total": 0,
-    "hedges_total": 12,
-    "hedged_requests": 12,
-    "cache_hits": 90,
-    "cache_hit_rate": 0.6,
-    "cost_usd_client": 0.009564,
+    "hedges_total": 14,
+    "hedged_requests": 14,
+    "cache_hits": 87,
+    "cache_hit_rate": 0.58,
+    "cost_usd_client": 0.0104,
     "cost_usd_wasted": 0.0,
     "outcomes": {
       "success": 150
@@ -54,8 +54,8 @@
       "mock_primary": 131,
       "mock_secondary": 19
     },
-    "throughput_rps": 81.53,
-    "cost_usd_server": 0.009564
+    "throughput_rps": 105.53,
+    "cost_usd_server": 0.0104
   },
   "gateway_config": {
     "reliability": {
@@ -99,6 +99,16 @@
         "enabled": true,
         "delay_ms": 400,
         "max_in_flight": 2
+      },
+      "bulkhead": {
+        "enabled": true,
+        "max_concurrent_per_provider": 16,
+        "queue_timeout_ms": 2000
+      },
+      "rate_limit": {
+        "enabled": true,
+        "requests_per_second": 200.0,
+        "burst": 400
       },
       "cache": {
         "enabled": true,
@@ -195,7 +205,7 @@
         "provider": "mock_primary",
         "enabled": true,
         "state": "closed",
-        "window_calls": 48,
+        "window_calls": 49,
         "failure_ratio": 0.0,
         "cooldown_remaining_s": 0.0,
         "opened_count": 0,
@@ -205,7 +215,7 @@
         "provider": "mock_secondary",
         "enabled": true,
         "state": "closed",
-        "window_calls": 12,
+        "window_calls": 14,
         "failure_ratio": 0.0,
         "cooldown_remaining_s": 0.0,
         "opened_count": 0,
@@ -222,21 +232,65 @@
         "short_circuited": 0
       }
     ],
+    "bulkheads": [
+      {
+        "provider": "mock_primary",
+        "limit": 16,
+        "in_flight": 0,
+        "admitted": 63,
+        "queued": 0,
+        "shed": 0,
+        "peak_in_flight": 15,
+        "avg_queue_wait_ms": 0.0
+      },
+      {
+        "provider": "mock_secondary",
+        "limit": 16,
+        "in_flight": 0,
+        "admitted": 14,
+        "queued": 0,
+        "shed": 0,
+        "peak_in_flight": 4,
+        "avg_queue_wait_ms": 0.0
+      },
+      {
+        "provider": "mock_tertiary",
+        "limit": 16,
+        "in_flight": 0,
+        "admitted": 0,
+        "queued": 0,
+        "shed": 0,
+        "peak_in_flight": 0,
+        "avg_queue_wait_ms": 0.0
+      }
+    ],
+    "rate_limit": {
+      "enabled": true,
+      "requests_per_second": 200.0,
+      "burst": 400,
+      "scopes": {
+        "__global__": {
+          "tokens": 395.35,
+          "allowed": 150,
+          "throttled": 0
+        }
+      }
+    },
     "cache": {
       "enabled": true,
       "embedder": "hashing",
       "lookups": 150,
-      "hits": 90,
-      "stores": 60,
+      "hits": 87,
+      "stores": 63,
       "errors": 0,
-      "hit_rate": 0.6
+      "hit_rate": 0.58
     },
     "budget": {
       "period": "day",
       "period_start": "2026-08-12T00:00:00+00:00",
       "limit_usd": 25.0,
-      "spent_usd": 1.129602,
-      "remaining_usd": 23.870398,
+      "spent_usd": 2.364866,
+      "remaining_usd": 22.635134,
       "per_key": {}
     },
     "recorder": {
@@ -252,23 +306,29 @@
       {
         "upstream": "primary",
         "profile": "hang",
-        "served": 60,
+        "served": 63,
         "deck_size": 100,
-        "cursor": 60,
+        "cursor": 63,
         "counts": {
-          "hang": 12,
-          "ok": 48
-        }
+          "hang": 14,
+          "ok": 49
+        },
+        "max_concurrency": 0,
+        "peak_in_flight": 15,
+        "rejected_overload": 0
       },
       {
         "upstream": "secondary",
         "profile": "healthy",
-        "served": 12,
+        "served": 14,
         "deck_size": 100,
-        "cursor": 12,
+        "cursor": 14,
         "counts": {
-          "ok": 12
-        }
+          "ok": 14
+        },
+        "max_concurrency": 0,
+        "peak_in_flight": 4,
+        "rejected_overload": 0
       },
       {
         "upstream": "tertiary",
@@ -276,7 +336,10 @@
         "served": 0,
         "deck_size": 100,
         "cursor": 0,
-        "counts": {}
+        "counts": {},
+        "max_concurrency": 0,
+        "peak_in_flight": 0,
+        "rejected_overload": 0
       }
     ]
   },

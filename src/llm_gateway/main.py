@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import math
 import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -22,9 +23,11 @@ from llm_gateway.cache.store import SemanticCache
 from llm_gateway.db import migrate
 from llm_gateway.db.recorder import CallRecord, CallRecorder
 from llm_gateway.db.session import Database
-from llm_gateway.errors import AuthenticationError, ErrorKind, GatewayError
+from llm_gateway.errors import AuthenticationError, ErrorKind, GatewayError, ThrottledError
 from llm_gateway.providers.registry import ProviderRegistry
 from llm_gateway.reliability.breaker import BreakerRegistry
+from llm_gateway.reliability.bulkhead import BulkheadRegistry
+from llm_gateway.reliability.ratelimit import RateLimiter
 from llm_gateway.router import ExecutionResult, Orchestrator
 from llm_gateway.schemas import (
     ChatCompletionRequest,
@@ -45,6 +48,8 @@ class AppState:
     database: Database
     registry: ProviderRegistry
     breakers: BreakerRegistry
+    bulkheads: BulkheadRegistry
+    limiter: RateLimiter
     cache: SemanticCache
     budget: BudgetTracker
     recorder: CallRecorder
@@ -76,19 +81,27 @@ async def build_state(settings: Settings) -> AppState:
 
     registry = ProviderRegistry(settings)
     breakers = BreakerRegistry(settings.reliability.circuit_breaker, registry.enabled_providers())
+    bulkheads = BulkheadRegistry(
+        settings.reliability.bulkhead,
+        registry.enabled_providers(),
+        {name: provider.max_concurrent for name, provider in settings.providers.items()},
+    )
+    limiter = RateLimiter(settings.reliability.rate_limit)
     embedder, embed_client = _build_embedder(settings)
     cache = SemanticCache(settings.reliability.cache, embedder, database)
     budget = BudgetTracker(settings.budget, settings.auth, database)
     await budget.refresh(force=True)
     recorder = CallRecorder(database, settings.database)
     recorder.start()
-    orchestrator = Orchestrator(settings, registry, breakers, cache, budget)
+    orchestrator = Orchestrator(settings, registry, breakers, cache, budget, bulkheads)
 
     return AppState(
         settings=settings,
         database=database,
         registry=registry,
         breakers=breakers,
+        bulkheads=bulkheads,
+        limiter=limiter,
         cache=cache,
         budget=budget,
         recorder=recorder,
@@ -114,6 +127,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             "circuit_breaker": settings.reliability.circuit_breaker.enabled,
             "fallback": settings.reliability.fallback.enabled,
             "hedging": settings.reliability.hedging.enabled,
+            "bulkhead": settings.reliability.bulkhead.enabled,
+            "rate_limit": settings.reliability.rate_limit.enabled,
             "cache": settings.reliability.cache.enabled,
         },
     )
@@ -227,6 +242,43 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         request_id = new_request_id()
         route_name = payload.model or state.settings.routes.default
         started = time.monotonic()
+
+        # Admission control comes first, before the cache and before the route is
+        # even resolved: the point of a rate limit is to refuse work cheaply.
+        retry_after_s = state.limiter.check(api_key_id)
+        if retry_after_s is not None:
+            error: GatewayError = ThrottledError(
+                f"rate limit of {state.settings.reliability.rate_limit.requests_per_second}"
+                " req/s exceeded",
+                retry_after_s=retry_after_s,
+            )
+            latency_ms = int((time.monotonic() - started) * 1000)
+            observability.observe_request(
+                route=route_name, latency_s=latency_ms / 1000, error=error
+            )
+            state.recorder.submit(
+                CallRecord(
+                    request_id=request_id,
+                    route=route_name,
+                    api_key_id=api_key_id,
+                    outcome="error",
+                    error_kind=str(error.kind),
+                    http_status=error.http_status,
+                    latency_ms=latency_ms,
+                    prompt_chars=len(payload.prompt_text()),
+                )
+            )
+            body = ErrorResponse(
+                error=ErrorBody(
+                    type="rate_limit_error",
+                    message=error.message,
+                    kind=str(error.kind),
+                    request_id=request_id,
+                )
+            )
+            headers = _gateway_headers(request_id, error=error, latency_ms=latency_ms)
+            headers["Retry-After"] = str(max(1, math.ceil(retry_after_s)))
+            return JSONResponse(status_code=429, content=body.model_dump(), headers=headers)
 
         if route_name not in state.settings.routes.definitions:
             known = ", ".join(sorted(state.settings.routes.definitions))
@@ -430,6 +482,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def reliability_state(state: Annotated[AppState, Depends(get_state)]) -> dict[str, Any]:
         return {
             "circuit_breakers": state.breakers.snapshot(),
+            "bulkheads": state.bulkheads.snapshot(),
+            "rate_limit": state.limiter.snapshot(),
             "cache": state.cache.stats(),
             "budget": state.budget.snapshot().__dict__,
             "recorder": state.recorder.stats(),
@@ -446,6 +500,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         cache or a half-open breaker from the previous one.
         """
         state.breakers.reset()
+        state.bulkheads.reset()
+        state.limiter.reset()
         cleared = 0
         if cache:
             await state.cache.drain()
@@ -469,6 +525,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         """
         observability.refresh_gauges(
             breakers=state.breakers.snapshot(),
+            bulkheads=state.bulkheads.snapshot(),
             budget=state.budget.snapshot().__dict__,
             recorder=state.recorder.stats(),
         )

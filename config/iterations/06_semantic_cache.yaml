@@ -21,6 +21,10 @@ reliability:
     enabled: true
   hedging:
     enabled: false
+  bulkhead:
+    enabled: false
+  rate_limit:
+    enabled: false
   cache:
     enabled: true
     similarity_threshold: 0.60

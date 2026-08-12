@@ -1,0 +1,4 @@
+# Финальная конфигурация без rate limit на входе.
+reliability:
+  rate_limit:
+    enabled: false

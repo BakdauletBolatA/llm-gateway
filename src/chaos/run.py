@@ -39,6 +39,7 @@ DEFAULT_SCENARIOS = [
     "slow",
     "hang",
     "storm",
+    "capacity_limited",
     "primary_outage",
     "total_outage",
 ]

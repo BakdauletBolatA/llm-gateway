@@ -119,6 +119,20 @@ RECORDER_DROPPED = _gauge(
     "Call records dropped because the queue was full — logging must never block a request",
 )
 RECORDER_FAILURES = _gauge("llm_gateway_recorder_write_failures", "Failed batch writes")
+BULKHEAD_IN_FLIGHT = _gauge(
+    "llm_gateway_bulkhead_in_flight", "Calls currently in flight to a provider", ("provider",)
+)
+BULKHEAD_LIMIT = _gauge(
+    "llm_gateway_bulkhead_limit", "Concurrency limit per provider, 0 when unlimited", ("provider",)
+)
+BULKHEAD_QUEUED = _gauge(
+    "llm_gateway_bulkhead_queued", "Calls that had to wait for a slot", ("provider",)
+)
+BULKHEAD_SHED = _gauge(
+    "llm_gateway_bulkhead_shed",
+    "Calls shed because no slot came free before the deadline",
+    ("provider",),
+)
 
 _BREAKER_STATE_VALUES = {"closed": 0.0, "half_open": 1.0, "open": 2.0}
 
@@ -172,6 +186,7 @@ def observe_request(
 def refresh_gauges(
     *,
     breakers: list[dict[str, Any]],
+    bulkheads: list[dict[str, Any]],
     budget: dict[str, Any],
     recorder: dict[str, Any],
 ) -> None:
@@ -186,6 +201,12 @@ def refresh_gauges(
         state = _BREAKER_STATE_VALUES.get(str(snapshot["state"]), 0.0)
         BREAKER_STATE.labels(provider=provider).set(state)
         BREAKER_FAILURE_RATIO.labels(provider=provider).set(float(snapshot["failure_ratio"]))
+    for snapshot in bulkheads:
+        provider = str(snapshot["provider"])
+        BULKHEAD_IN_FLIGHT.labels(provider=provider).set(float(snapshot["in_flight"]))
+        BULKHEAD_LIMIT.labels(provider=provider).set(float(snapshot["limit"]))
+        BULKHEAD_QUEUED.labels(provider=provider).set(float(snapshot["queued"]))
+        BULKHEAD_SHED.labels(provider=provider).set(float(snapshot["shed"]))
     BUDGET_LIMIT.set(float(budget.get("limit_usd", 0.0)))
     BUDGET_SPENT.set(float(budget.get("spent_usd", 0.0)))
     RECORDER_QUEUE.set(float(recorder.get("queued", 0)))

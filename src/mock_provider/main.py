@@ -25,7 +25,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel
 
-from mock_provider.injector import Card, MockState
+from mock_provider.injector import Card, MockState, UpstreamState
 from mock_provider.profiles import Outcome, ProfileLibrary, load_profiles
 
 logger = logging.getLogger(__name__)
@@ -217,6 +217,32 @@ def _anthropic_prompt(body: dict[str, Any]) -> str:
 async def _serve(app: FastAPI, upstream: str, prompt: str, model: str, dialect: str) -> Response:
     state: MockState = app.state.mock
     upstream_state = state.upstream(upstream)
+    spec = upstream_state.profile
+
+    if not upstream_state.admit():
+        # The upstream is at its concurrency ceiling. A real provider answers this
+        # with 503 (or 429) and a Retry-After rather than queueing forever.
+        return JSONResponse(
+            status_code=503,
+            headers={"Retry-After": str(int(spec.retry_after_s if spec else 1))},
+            content={
+                "error": {
+                    "message": (
+                        f"too many concurrent requests: limit {spec.max_concurrency if spec else 0}"
+                    ),
+                    "type": "overloaded_error",
+                }
+            },
+        )
+    try:
+        return await _serve_card(upstream_state, prompt, model, dialect)
+    finally:
+        upstream_state.release()
+
+
+async def _serve_card(
+    upstream_state: UpstreamState, prompt: str, model: str, dialect: str
+) -> Response:
     spec = upstream_state.profile
     card = upstream_state.next_card()
 

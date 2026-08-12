@@ -3,8 +3,8 @@
   "scenario": "primary_outage",
   "route": "chaos-default",
   "note": "выключен семантический кэш",
-  "started_at": "2026-08-12T12:49:32.180393+00:00",
-  "duration_s": 1.3,
+  "started_at": "2026-08-12T22:34:11.334545+00:00",
+  "duration_s": 1.07,
   "concurrency": 15,
   "client_timeout_s": 20.0,
   "workload": {
@@ -21,30 +21,30 @@
     "failures": 0,
     "success_rate": 1.0,
     "latency_ms": {
-      "p50": 106.2,
-      "p95": 259.9,
-      "p99": 291.4,
-      "mean": 116.0,
-      "max": 308.2,
-      "min": 58.7
+      "p50": 90.3,
+      "p95": 194.6,
+      "p99": 265.0,
+      "mean": 98.3,
+      "max": 302.0,
+      "min": 45.0
     },
     "latency_ms_success_only": {
-      "p50": 106.2,
-      "p95": 259.9,
-      "p99": 291.4,
-      "mean": 116.0,
-      "max": 308.2,
-      "min": 58.7
+      "p50": 90.3,
+      "p95": 194.6,
+      "p99": 265.0,
+      "mean": 98.3,
+      "max": 302.0,
+      "min": 45.0
     },
-    "attempts_total": 165,
-    "retries_total": 0,
+    "attempts_total": 166,
+    "retries_total": 1,
     "fallbacks_total": 140,
     "breaker_skips_total": 140,
     "hedges_total": 0,
     "hedged_requests": 0,
     "cache_hits": 0,
     "cache_hit_rate": 0.0,
-    "cost_usd_client": 0.073019,
+    "cost_usd_client": 0.073017,
     "cost_usd_wasted": 0.0,
     "outcomes": {
       "success": 150
@@ -54,8 +54,8 @@
       "mock_primary": 10,
       "mock_secondary": 140
     },
-    "throughput_rps": 115.47,
-    "cost_usd_server": 0.073019
+    "throughput_rps": 140.37,
+    "cost_usd_server": 0.073017
   },
   "gateway_config": {
     "reliability": {
@@ -99,6 +99,16 @@
         "enabled": true,
         "delay_ms": 400,
         "max_in_flight": 2
+      },
+      "bulkhead": {
+        "enabled": true,
+        "max_concurrent_per_provider": 16,
+        "queue_timeout_ms": 2000
+      },
+      "rate_limit": {
+        "enabled": true,
+        "requests_per_second": 200.0,
+        "burst": 400
       },
       "cache": {
         "enabled": false,
@@ -195,9 +205,9 @@
         "provider": "mock_primary",
         "enabled": true,
         "state": "open",
-        "window_calls": 5,
+        "window_calls": 6,
         "failure_ratio": 1.0,
-        "cooldown_remaining_s": 2.804,
+        "cooldown_remaining_s": 2.998,
         "opened_count": 1,
         "short_circuited": 140
       },
@@ -222,6 +232,50 @@
         "short_circuited": 0
       }
     ],
+    "bulkheads": [
+      {
+        "provider": "mock_primary",
+        "limit": 16,
+        "in_flight": 0,
+        "admitted": 26,
+        "queued": 0,
+        "shed": 0,
+        "peak_in_flight": 15,
+        "avg_queue_wait_ms": 0.0
+      },
+      {
+        "provider": "mock_secondary",
+        "limit": 16,
+        "in_flight": 0,
+        "admitted": 140,
+        "queued": 0,
+        "shed": 0,
+        "peak_in_flight": 15,
+        "avg_queue_wait_ms": 0.0
+      },
+      {
+        "provider": "mock_tertiary",
+        "limit": 16,
+        "in_flight": 0,
+        "admitted": 0,
+        "queued": 0,
+        "shed": 0,
+        "peak_in_flight": 0,
+        "avg_queue_wait_ms": 0.0
+      }
+    ],
+    "rate_limit": {
+      "enabled": true,
+      "requests_per_second": 200.0,
+      "burst": 400,
+      "scopes": {
+        "__global__": {
+          "tokens": 398.7,
+          "allowed": 150,
+          "throttled": 0
+        }
+      }
+    },
     "cache": {
       "enabled": false,
       "embedder": "hashing",
@@ -235,8 +289,8 @@
       "period": "day",
       "period_start": "2026-08-12T00:00:00+00:00",
       "limit_usd": 25.0,
-      "spent_usd": 1.603854,
-      "remaining_usd": 23.396146,
+      "spent_usd": 3.033354,
+      "remaining_usd": 21.966646,
       "per_key": {}
     },
     "recorder": {
@@ -252,13 +306,16 @@
       {
         "upstream": "primary",
         "profile": "degraded_then_dead",
-        "served": 25,
+        "served": 26,
         "deck_size": 100,
-        "cursor": 15,
+        "cursor": 16,
         "counts": {
-          "http_500": 15,
+          "http_500": 16,
           "ok": 10
-        }
+        },
+        "max_concurrency": 0,
+        "peak_in_flight": 10,
+        "rejected_overload": 0
       },
       {
         "upstream": "secondary",
@@ -268,7 +325,10 @@
         "cursor": 140,
         "counts": {
           "ok": 140
-        }
+        },
+        "max_concurrency": 0,
+        "peak_in_flight": 15,
+        "rejected_overload": 0
       },
       {
         "upstream": "tertiary",
@@ -276,7 +336,10 @@
         "served": 0,
         "deck_size": 100,
         "cursor": 0,
-        "counts": {}
+        "counts": {},
+        "max_concurrency": 0,
+        "peak_in_flight": 0,
+        "rejected_overload": 0
       }
     ]
   },

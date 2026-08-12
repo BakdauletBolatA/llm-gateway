@@ -3,8 +3,8 @@
   "scenario": "primary_outage",
   "route": "chaos-default",
   "note": "выключены таймауты",
-  "started_at": "2026-08-12T12:46:11.503506+00:00",
-  "duration_s": 1.63,
+  "started_at": "2026-08-12T22:29:57.372496+00:00",
+  "duration_s": 1.11,
   "concurrency": 15,
   "client_timeout_s": 20.0,
   "workload": {
@@ -21,41 +21,41 @@
     "failures": 0,
     "success_rate": 1.0,
     "latency_ms": {
-      "p50": 102.9,
-      "p95": 309.8,
-      "p99": 549.1,
-      "mean": 144.2,
-      "max": 572.8,
-      "min": 33.1
+      "p50": 66.4,
+      "p95": 242.0,
+      "p99": 371.9,
+      "mean": 95.6,
+      "max": 404.0,
+      "min": 7.8
     },
     "latency_ms_success_only": {
-      "p50": 102.9,
-      "p95": 309.8,
-      "p99": 549.1,
-      "mean": 144.2,
-      "max": 572.8,
-      "min": 33.1
+      "p50": 66.4,
+      "p95": 242.0,
+      "p99": 371.9,
+      "mean": 95.6,
+      "max": 404.0,
+      "min": 7.8
     },
-    "attempts_total": 79,
-    "retries_total": 7,
-    "fallbacks_total": 51,
-    "breaker_skips_total": 50,
+    "attempts_total": 73,
+    "retries_total": 5,
+    "fallbacks_total": 46,
+    "breaker_skips_total": 46,
     "hedges_total": 0,
     "hedged_requests": 0,
-    "cache_hits": 89,
-    "cache_hit_rate": 0.5933,
-    "cost_usd_client": 0.026541,
+    "cache_hits": 94,
+    "cache_hit_rate": 0.6267,
+    "cost_usd_client": 0.023336,
     "cost_usd_wasted": 0.0,
     "outcomes": {
       "success": 150
     },
     "error_kinds": {},
     "providers_used": {
-      "mock_primary": 50,
-      "mock_secondary": 100
+      "mock_primary": 52,
+      "mock_secondary": 98
     },
-    "throughput_rps": 91.84,
-    "cost_usd_server": 0.026541
+    "throughput_rps": 135.29,
+    "cost_usd_server": 0.023336
   },
   "gateway_config": {
     "reliability": {
@@ -99,6 +99,16 @@
         "enabled": true,
         "delay_ms": 400,
         "max_in_flight": 2
+      },
+      "bulkhead": {
+        "enabled": true,
+        "max_concurrent_per_provider": 16,
+        "queue_timeout_ms": 2000
+      },
+      "rate_limit": {
+        "enabled": true,
+        "requests_per_second": 200.0,
+        "burst": 400
       },
       "cache": {
         "enabled": true,
@@ -195,17 +205,17 @@
         "provider": "mock_primary",
         "enabled": true,
         "state": "open",
-        "window_calls": 8,
+        "window_calls": 7,
         "failure_ratio": 1.0,
-        "cooldown_remaining_s": 2.59,
+        "cooldown_remaining_s": 3.06,
         "opened_count": 1,
-        "short_circuited": 50
+        "short_circuited": 46
       },
       {
         "provider": "mock_secondary",
         "enabled": true,
         "state": "closed",
-        "window_calls": 51,
+        "window_calls": 46,
         "failure_ratio": 0.0,
         "cooldown_remaining_s": 0.0,
         "opened_count": 0,
@@ -222,21 +232,65 @@
         "short_circuited": 0
       }
     ],
+    "bulkheads": [
+      {
+        "provider": "mock_primary",
+        "limit": 16,
+        "in_flight": 0,
+        "admitted": 27,
+        "queued": 0,
+        "shed": 0,
+        "peak_in_flight": 13,
+        "avg_queue_wait_ms": 0.0
+      },
+      {
+        "provider": "mock_secondary",
+        "limit": 16,
+        "in_flight": 0,
+        "admitted": 46,
+        "queued": 0,
+        "shed": 0,
+        "peak_in_flight": 10,
+        "avg_queue_wait_ms": 0.0
+      },
+      {
+        "provider": "mock_tertiary",
+        "limit": 16,
+        "in_flight": 0,
+        "admitted": 0,
+        "queued": 0,
+        "shed": 0,
+        "peak_in_flight": 0,
+        "avg_queue_wait_ms": 0.0
+      }
+    ],
+    "rate_limit": {
+      "enabled": true,
+      "requests_per_second": 200.0,
+      "burst": 400,
+      "scopes": {
+        "__global__": {
+          "tokens": 396.96,
+          "allowed": 150,
+          "throttled": 0
+        }
+      }
+    },
     "cache": {
       "enabled": true,
       "embedder": "hashing",
       "lookups": 150,
-      "hits": 89,
-      "stores": 61,
+      "hits": 94,
+      "stores": 56,
       "errors": 0,
-      "hit_rate": 0.5933
+      "hit_rate": 0.6267
     },
     "budget": {
       "period": "day",
       "period_start": "2026-08-12T00:00:00+00:00",
       "limit_usd": 25.0,
-      "spent_usd": 1.156143,
-      "remaining_usd": 23.843857,
+      "spent_usd": 2.388202,
+      "remaining_usd": 22.611798,
       "per_key": {}
     },
     "recorder": {
@@ -252,23 +306,29 @@
       {
         "upstream": "primary",
         "profile": "degraded_then_dead",
-        "served": 28,
+        "served": 27,
         "deck_size": 100,
-        "cursor": 18,
+        "cursor": 17,
         "counts": {
-          "http_500": 18,
+          "http_500": 17,
           "ok": 10
-        }
+        },
+        "max_concurrency": 0,
+        "peak_in_flight": 10,
+        "rejected_overload": 0
       },
       {
         "upstream": "secondary",
         "profile": "healthy",
-        "served": 51,
+        "served": 46,
         "deck_size": 100,
-        "cursor": 51,
+        "cursor": 46,
         "counts": {
-          "ok": 51
-        }
+          "ok": 46
+        },
+        "max_concurrency": 0,
+        "peak_in_flight": 10,
+        "rejected_overload": 0
       },
       {
         "upstream": "tertiary",
@@ -276,7 +336,10 @@
         "served": 0,
         "deck_size": 100,
         "cursor": 0,
-        "counts": {}
+        "counts": {},
+        "max_concurrency": 0,
+        "peak_in_flight": 0,
+        "rejected_overload": 0
       }
     ]
   },

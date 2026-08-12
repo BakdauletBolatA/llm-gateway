@@ -142,6 +142,8 @@ async def test_config_endpoint_exposes_the_effective_reliability_flags(
         "circuit_breaker",
         "fallback",
         "hedging",
+        "bulkhead",
+        "rate_limit",
         "cache",
     }
     assert config["default_route"] == "chaos-default"

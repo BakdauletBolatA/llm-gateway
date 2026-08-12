@@ -21,6 +21,10 @@ class ErrorKind(StrEnum):
     AUTH = "auth"
     BAD_REQUEST = "bad_request"
     CIRCUIT_OPEN = "circuit_open"
+    #: Наш собственный лимит, а не провайдерский: очередь к провайдеру полна.
+    CAPACITY = "capacity"
+    #: Наш собственный rate limit на входе.
+    THROTTLED = "throttled"
     BUDGET_EXCEEDED = "budget_exceeded"
     NO_PROVIDER = "no_provider"
     DEADLINE_EXCEEDED = "deadline_exceeded"
@@ -39,6 +43,8 @@ HTTP_STATUS_BY_KIND: dict[ErrorKind, int] = {
     ErrorKind.AUTH: 502,
     ErrorKind.BAD_REQUEST: 400,
     ErrorKind.CIRCUIT_OPEN: 503,
+    ErrorKind.CAPACITY: 503,
+    ErrorKind.THROTTLED: 429,
     ErrorKind.BUDGET_EXCEEDED: 402,
     ErrorKind.NO_PROVIDER: 503,
     ErrorKind.UNKNOWN: 502,
@@ -110,6 +116,16 @@ class BudgetExceededError(GatewayError):
         self.spent_usd = spent_usd
         self.limit_usd = limit_usd
         self.period = period
+
+
+class ThrottledError(GatewayError):
+    """The gateway's own rate limit, not a provider's."""
+
+    kind = ErrorKind.THROTTLED
+
+    def __init__(self, message: str, *, retry_after_s: float) -> None:
+        super().__init__(message)
+        self.retry_after_s = retry_after_s
 
 
 class NoProviderAvailableError(GatewayError):

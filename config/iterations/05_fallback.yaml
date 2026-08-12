@@ -21,5 +21,9 @@ reliability:
     max_providers: 3
   hedging:
     enabled: false
+  bulkhead:
+    enabled: false
+  rate_limit:
+    enabled: false
   cache:
     enabled: false

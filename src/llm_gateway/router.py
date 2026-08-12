@@ -33,6 +33,7 @@ from llm_gateway.errors import (
 from llm_gateway.providers.base import ProviderResponse
 from llm_gateway.providers.registry import ProviderRegistry
 from llm_gateway.reliability.breaker import BreakerRegistry
+from llm_gateway.reliability.bulkhead import BulkheadRegistry
 from llm_gateway.reliability.retry import compute_backoff, should_retry
 from llm_gateway.schemas import ChatCompletionRequest
 from llm_gateway.settings import RouteTarget, Settings
@@ -181,6 +182,7 @@ class Orchestrator:
         breakers: BreakerRegistry,
         cache: SemanticCache,
         budget: BudgetTracker,
+        bulkheads: BulkheadRegistry | None = None,
         rng: random.Random | None = None,
     ) -> None:
         self.settings = settings
@@ -188,6 +190,9 @@ class Orchestrator:
         self.breakers = breakers
         self.cache = cache
         self.budget = budget
+        self.bulkheads = bulkheads or BulkheadRegistry(
+            settings.reliability.bulkhead, registry.enabled_providers()
+        )
         self._rng = rng or random.Random()
 
     # -- helpers -----------------------------------------------------------
@@ -215,6 +220,20 @@ class Orchestrator:
             f"request deadline of {self.settings.reliability.timeouts.total_s}s "
             f"exceeded after {attempts} attempt(s){where}"
         )
+
+    def _slot_wait_s(self, deadline: float | None) -> float | None:
+        """How long a request may wait for a provider slot.
+
+        The configured queue timeout, further clipped by the request deadline: there
+        is no point queueing for a slot the request will not live long enough to use.
+        """
+        bulkhead = self.settings.reliability.bulkhead
+        wait = bulkhead.queue_timeout_s if bulkhead.enabled else None
+        remaining = self._remaining(deadline)
+        if remaining is None:
+            return wait
+        remaining = max(remaining, 0.0)
+        return remaining if wait is None else min(wait, remaining)
 
     def _estimate_cost(self, request: ChatCompletionRequest, provider: str, model: str) -> float:
         tokens_in = estimate_tokens(request.prompt_text())
@@ -516,13 +535,43 @@ class Orchestrator:
                 )
                 return outcome  # try the next provider in the chain
 
+            bulkhead = self.bulkheads.get(hop.provider)
+            if not await bulkhead.acquire(self._slot_wait_s(deadline)):
+                # Our own queue to this provider is full. Nothing was sent, so the
+                # breaker learns nothing — a full queue is our problem, not the
+                # provider's — and the chain moves on to the next one.
+                progress.records.append(
+                    AttemptRecord(
+                        attempt_no=progress.attempts + 1,
+                        hop_index=progress.hop_index,
+                        provider=hop.provider,
+                        model=hop.model,
+                        outcome="shed_bulkhead",
+                        error_kind=str(ErrorKind.CAPACITY),
+                    )
+                )
+                outcome.error = ProviderError(
+                    f"no capacity for provider {hop.provider!r}: "
+                    f"{self.settings.reliability.bulkhead.max_concurrent_per_provider} "
+                    "concurrent calls already in flight",
+                    kind=ErrorKind.CAPACITY,
+                    provider=hop.provider,
+                    model=hop.model,
+                )
+                return outcome
+
             progress.attempts += 1
             if attempt_in_hop > 1:
                 progress.retries += 1
 
             call_started = time.monotonic()
             try:
-                response = await adapter.complete(request, hop.model, client)
+                try:
+                    response = await adapter.complete(request, hop.model, client)
+                finally:
+                    # The slot goes back the moment the call ends: a backoff sleep
+                    # must not sit on provider capacity it is not using.
+                    bulkhead.release()
             except asyncio.CancelledError:
                 # Lost a hedge race. The call was already sent upstream, so it is
                 # logged as spent work; the breaker learns nothing from it, because

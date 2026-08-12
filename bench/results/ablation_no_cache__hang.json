@@ -3,8 +3,8 @@
   "scenario": "hang",
   "route": "chaos-default",
   "note": "выключен семантический кэш",
-  "started_at": "2026-08-12T12:49:26.801767+00:00",
-  "duration_s": 2.05,
+  "started_at": "2026-08-12T22:34:06.272396+00:00",
+  "duration_s": 1.92,
   "concurrency": 15,
   "client_timeout_s": 20.0,
   "workload": {
@@ -21,20 +21,20 @@
     "failures": 0,
     "success_rate": 1.0,
     "latency_ms": {
-      "p50": 104.8,
-      "p95": 515.1,
-      "p99": 532.3,
-      "mean": 176.2,
-      "max": 532.5,
-      "min": 51.5
+      "p50": 98.4,
+      "p95": 507.7,
+      "p99": 524.4,
+      "mean": 167.6,
+      "max": 525.4,
+      "min": 45.1
     },
     "latency_ms_success_only": {
-      "p50": 104.8,
-      "p95": 515.1,
-      "p99": 532.3,
-      "mean": 176.2,
-      "max": 532.5,
-      "min": 51.5
+      "p50": 98.4,
+      "p95": 507.7,
+      "p99": 524.4,
+      "mean": 167.6,
+      "max": 525.4,
+      "min": 45.1
     },
     "attempts_total": 179,
     "retries_total": 0,
@@ -44,7 +44,7 @@
     "hedged_requests": 29,
     "cache_hits": 0,
     "cache_hit_rate": 0.0,
-    "cost_usd_client": 0.022846,
+    "cost_usd_client": 0.022841,
     "cost_usd_wasted": 0.0,
     "outcomes": {
       "success": 150
@@ -54,8 +54,8 @@
       "mock_primary": 121,
       "mock_secondary": 29
     },
-    "throughput_rps": 73.05,
-    "cost_usd_server": 0.022846
+    "throughput_rps": 77.96,
+    "cost_usd_server": 0.022841
   },
   "gateway_config": {
     "reliability": {
@@ -99,6 +99,16 @@
         "enabled": true,
         "delay_ms": 400,
         "max_in_flight": 2
+      },
+      "bulkhead": {
+        "enabled": true,
+        "max_concurrent_per_provider": 16,
+        "queue_timeout_ms": 2000
+      },
+      "rate_limit": {
+        "enabled": true,
+        "requests_per_second": 200.0,
+        "burst": 400
       },
       "cache": {
         "enabled": false,
@@ -222,6 +232,50 @@
         "short_circuited": 0
       }
     ],
+    "bulkheads": [
+      {
+        "provider": "mock_primary",
+        "limit": 16,
+        "in_flight": 0,
+        "admitted": 150,
+        "queued": 0,
+        "shed": 0,
+        "peak_in_flight": 15,
+        "avg_queue_wait_ms": 0.0
+      },
+      {
+        "provider": "mock_secondary",
+        "limit": 16,
+        "in_flight": 0,
+        "admitted": 29,
+        "queued": 0,
+        "shed": 0,
+        "peak_in_flight": 5,
+        "avg_queue_wait_ms": 0.0
+      },
+      {
+        "provider": "mock_tertiary",
+        "limit": 16,
+        "in_flight": 0,
+        "admitted": 0,
+        "queued": 0,
+        "shed": 0,
+        "peak_in_flight": 0,
+        "avg_queue_wait_ms": 0.0
+      }
+    ],
+    "rate_limit": {
+      "enabled": true,
+      "requests_per_second": 200.0,
+      "burst": 400,
+      "scopes": {
+        "__global__": {
+          "tokens": 398.02,
+          "allowed": 150,
+          "throttled": 0
+        }
+      }
+    },
     "cache": {
       "enabled": false,
       "embedder": "hashing",
@@ -235,8 +289,8 @@
       "period": "day",
       "period_start": "2026-08-12T00:00:00+00:00",
       "limit_usd": 25.0,
-      "spent_usd": 1.530835,
-      "remaining_usd": 23.469165,
+      "spent_usd": 2.960337,
+      "remaining_usd": 22.039663,
       "per_key": {}
     },
     "recorder": {
@@ -258,7 +312,10 @@
         "counts": {
           "hang": 29,
           "ok": 121
-        }
+        },
+        "max_concurrency": 0,
+        "peak_in_flight": 34,
+        "rejected_overload": 0
       },
       {
         "upstream": "secondary",
@@ -268,7 +325,10 @@
         "cursor": 29,
         "counts": {
           "ok": 29
-        }
+        },
+        "max_concurrency": 0,
+        "peak_in_flight": 5,
+        "rejected_overload": 0
       },
       {
         "upstream": "tertiary",
@@ -276,7 +336,10 @@
         "served": 0,
         "deck_size": 100,
         "cursor": 0,
-        "counts": {}
+        "counts": {},
+        "max_concurrency": 0,
+        "peak_in_flight": 0,
+        "rejected_overload": 0
       }
     ]
   },

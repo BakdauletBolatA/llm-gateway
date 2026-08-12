@@ -70,6 +70,9 @@ class UpstreamState:
         self._cursor = 0
         self._served = 0
         self.counts: dict[str, int] = {}
+        self.in_flight = 0
+        self.peak_in_flight = 0
+        self.rejected_overload = 0
 
     def set_profile(self, spec: ProfileSpec) -> None:
         self.profile = spec
@@ -77,6 +80,26 @@ class UpstreamState:
         self._cursor = 0
         self._served = 0
         self.counts = {}
+        self.in_flight = 0
+        self.peak_in_flight = 0
+        self.rejected_overload = 0
+
+    def admit(self) -> bool:
+        """Take a concurrency slot, or refuse when the upstream is already full.
+
+        Refusing happens before a card is drawn: otherwise a rejected request would
+        eat an outcome from the deck and the mix actually *served* would drift.
+        """
+        limit = self.profile.max_concurrency if self.profile else 0
+        if limit and self.in_flight >= limit:
+            self.rejected_overload += 1
+            return False
+        self.in_flight += 1
+        self.peak_in_flight = max(self.peak_in_flight, self.in_flight)
+        return True
+
+    def release(self) -> None:
+        self.in_flight = max(0, self.in_flight - 1)
 
     def _seed_for(self, profile_name: str) -> int:
         return stable_seed(f"{self._base_seed}:{self.name}:{profile_name}")
@@ -108,6 +131,9 @@ class UpstreamState:
             "deck_size": len(self._deck),
             "cursor": self._cursor,
             "counts": dict(sorted(self.counts.items())),
+            "max_concurrency": self.profile.max_concurrency if self.profile else 0,
+            "peak_in_flight": self.peak_in_flight,
+            "rejected_overload": self.rejected_overload,
         }
 
 

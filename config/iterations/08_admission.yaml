@@ -1,0 +1,41 @@
+# Итерация 8 — admission control: лимит конкурентности на провайдера и rate limit.
+#
+# Все прежние механизмы решают, ЧТО делать с плохим ответом. Эти два решают, стоит
+# ли вообще отправлять запрос:
+#
+#   bulkhead   — сколько вызовов держать в полёте к одному провайдеру. Ставится из
+#                квоты конкурентности провайдера: тогда шлюз не превышает её сам,
+#                а не узнаёт о ней из потока 503. Запрос, которому не досталось
+#                слота за queue_timeout_ms, уходит к следующему звену цепочки.
+#   rate_limit — токен-бакет на API-ключ (или один общий, если auth выключен):
+#                отказ 429 с Retry-After до любой работы.
+#
+# Значения по умолчанию заведомо выше пропускной способности стенда, поэтому в
+# матрице итераций эта строка почти совпадает с итерацией 7 — и это ровно то, что
+# нужно проверить: admission control, который не срабатывает, ничего не стоит.
+# Что он даёт при настоящей квоте — в прогонах extra_capacity_* отчёта.
+reliability:
+  timeouts:
+    enabled: true
+  retries:
+    enabled: true
+  circuit_breaker:
+    enabled: true
+  fallback:
+    enabled: true
+    max_providers: 3
+  hedging:
+    enabled: true
+    delay_ms: 400
+    max_in_flight: 2
+  bulkhead:
+    enabled: true
+    max_concurrent_per_provider: 16
+    queue_timeout_ms: 2000
+  rate_limit:
+    enabled: true
+    requests_per_second: 200
+    burst: 400
+  cache:
+    enabled: true
+    similarity_threshold: 0.60

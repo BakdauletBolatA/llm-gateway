@@ -92,8 +92,10 @@ MECHANISMS = [
     ("retries", "R", "ретраи"),
     ("circuit_breaker", "B", "circuit breaker"),
     ("fallback", "F", "fallback"),
-    ("hedging", "H", "хедж"),
     ("cache", "C", "семкэш"),
+    ("hedging", "H", "хедж"),
+    ("bulkhead", "L", "лимит"),
+    ("rate_limit", "A", "rate limit"),
 ]
 
 
@@ -147,6 +149,55 @@ def _hedging_table(results: list[dict[str, Any]]) -> str | None:
             "$ с хеджем",
             "$ без",
             "из них впустую $",
+        ],
+        rows,
+    )
+
+
+def _capacity_table(results: list[dict[str, Any]]) -> str | None:
+    """The capacity-limited runs, with what the *provider* saw next to what we did."""
+    runs = [
+        run
+        for run in results
+        if run["scenario"] == "capacity_limited" and run["label"].startswith("extra_capacity")
+    ]
+    if not runs:
+        return None
+    rows = []
+    for run in sorted(runs, key=lambda r: r["results"]["success_rate"]):
+        summary = run["results"]
+        state = run.get("gateway_reliability_state") or {}
+        bulkheads = state.get("bulkheads") or []
+        breakers = state.get("circuit_breakers") or []
+        rejected = sum(
+            int(upstream.get("rejected_overload") or 0)
+            for upstream in (run.get("mock_state") or {}).get("upstreams", [])
+        )
+        queued = sum(int(b.get("queued") or 0) for b in bulkheads)
+        waits = [float(b.get("avg_queue_wait_ms") or 0) for b in bulkheads if b.get("queued")]
+        open_breakers = sum(1 for b in breakers if b.get("state") == "open")
+        rows.append(
+            [
+                f"`{run['label'].removeprefix('extra_')}`",
+                _pct(summary["success_rate"]),
+                f"{summary['latency_ms']['p95']:.0f}",
+                str(rejected),
+                f"{open_breakers} из {len(breakers)}",
+                str(queued),
+                f"{max(waits, default=0.0):.0f}",
+                f"{run['duration_s']:.1f}",
+            ]
+        )
+    return _table(
+        [
+            "конфигурация",
+            "success",
+            "p95, мс",
+            "503 от провайдера",
+            "брейкеров открыто",
+            "запросов в очереди",
+            "макс. ожидание слота, мс",
+            "прогон, с",
         ],
         rows,
     )
@@ -228,6 +279,16 @@ def build_section(results: list[dict[str, Any]]) -> str:
             "та же сборка с выключенным хеджем.\n"
         )
         parts.append(hedging_table)
+
+    capacity_table = _capacity_table(results)
+    if capacity_table is not None:
+        parts.append("\n### Провайдер с квотой конкурентности\n")
+        parts.append(
+            "Сценарий `capacity_limited`: каждый апстрим обслуживает не больше двух "
+            "запросов одновременно, всё сверх — 503. Слева направо растёт то, "
+            "насколько шлюз уважает чужую квоту сам.\n"
+        )
+        parts.append(capacity_table)
 
     if ablations:
         parts.append("\n### Ablation: выключаем по одному механизму\n")

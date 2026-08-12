@@ -3,8 +3,8 @@
   "scenario": "primary_outage",
   "route": "chaos-default",
   "note": "выключен circuit breaker",
-  "started_at": "2026-08-12T12:47:18.940347+00:00",
-  "duration_s": 2.2,
+  "started_at": "2026-08-12T22:31:00.846863+00:00",
+  "duration_s": 1.81,
   "concurrency": 15,
   "client_timeout_s": 20.0,
   "workload": {
@@ -21,20 +21,20 @@
     "failures": 0,
     "success_rate": 1.0,
     "latency_ms": {
-      "p50": 73.3,
-      "p95": 510.8,
-      "p99": 571.1,
-      "mean": 185.9,
-      "max": 576.1,
-      "min": 14.7
+      "p50": 43.2,
+      "p95": 459.5,
+      "p99": 516.2,
+      "mean": 147.7,
+      "max": 517.8,
+      "min": 5.9
     },
     "latency_ms_success_only": {
-      "p50": 73.3,
-      "p95": 510.8,
-      "p99": 571.1,
-      "mean": 185.9,
-      "max": 576.1,
-      "min": 14.7
+      "p50": 43.2,
+      "p95": 459.5,
+      "p99": 516.2,
+      "mean": 147.7,
+      "max": 517.8,
+      "min": 5.9
     },
     "attempts_total": 211,
     "retries_total": 100,
@@ -44,19 +44,19 @@
     "hedged_requests": 1,
     "cache_hits": 90,
     "cache_hit_rate": 0.6,
-    "cost_usd_client": 0.025057,
+    "cost_usd_client": 0.02503,
     "cost_usd_wasted": 0.0,
     "outcomes": {
       "success": 150
     },
     "error_kinds": {},
     "providers_used": {
-      "mock_primary": 64,
-      "mock_secondary": 85,
+      "mock_primary": 59,
+      "mock_secondary": 90,
       "mock_tertiary": 1
     },
-    "throughput_rps": 68.31,
-    "cost_usd_server": 0.025057
+    "throughput_rps": 83.01,
+    "cost_usd_server": 0.02503
   },
   "gateway_config": {
     "reliability": {
@@ -100,6 +100,16 @@
         "enabled": true,
         "delay_ms": 400,
         "max_in_flight": 2
+      },
+      "bulkhead": {
+        "enabled": true,
+        "max_concurrent_per_provider": 16,
+        "queue_timeout_ms": 2000
+      },
+      "rate_limit": {
+        "enabled": true,
+        "requests_per_second": 200.0,
+        "burst": 400
       },
       "cache": {
         "enabled": true,
@@ -223,6 +233,50 @@
         "short_circuited": 0
       }
     ],
+    "bulkheads": [
+      {
+        "provider": "mock_primary",
+        "limit": 16,
+        "in_flight": 0,
+        "admitted": 160,
+        "queued": 0,
+        "shed": 0,
+        "peak_in_flight": 13,
+        "avg_queue_wait_ms": 0.0
+      },
+      {
+        "provider": "mock_secondary",
+        "limit": 16,
+        "in_flight": 0,
+        "admitted": 50,
+        "queued": 0,
+        "shed": 0,
+        "peak_in_flight": 7,
+        "avg_queue_wait_ms": 0.0
+      },
+      {
+        "provider": "mock_tertiary",
+        "limit": 16,
+        "in_flight": 0,
+        "admitted": 1,
+        "queued": 0,
+        "shed": 0,
+        "peak_in_flight": 1,
+        "avg_queue_wait_ms": 0.0
+      }
+    ],
+    "rate_limit": {
+      "enabled": true,
+      "requests_per_second": 200.0,
+      "burst": 400,
+      "scopes": {
+        "__global__": {
+          "tokens": 397.06,
+          "allowed": 150,
+          "throttled": 0
+        }
+      }
+    },
     "cache": {
       "enabled": true,
       "embedder": "hashing",
@@ -236,8 +290,8 @@
       "period": "day",
       "period_start": "2026-08-12T00:00:00+00:00",
       "limit_usd": 25.0,
-      "spent_usd": 1.333507,
-      "remaining_usd": 23.666493,
+      "spent_usd": 2.565518,
+      "remaining_usd": 22.434482,
       "per_key": {}
     },
     "recorder": {
@@ -259,7 +313,10 @@
         "counts": {
           "http_500": 150,
           "ok": 10
-        }
+        },
+        "max_concurrency": 0,
+        "peak_in_flight": 9,
+        "rejected_overload": 0
       },
       {
         "upstream": "secondary",
@@ -269,7 +326,10 @@
         "cursor": 50,
         "counts": {
           "ok": 50
-        }
+        },
+        "max_concurrency": 0,
+        "peak_in_flight": 7,
+        "rejected_overload": 0
       },
       {
         "upstream": "tertiary",
@@ -279,7 +339,10 @@
         "cursor": 1,
         "counts": {
           "ok": 1
-        }
+        },
+        "max_concurrency": 0,
+        "peak_in_flight": 1,
+        "rejected_overload": 0
       }
     ]
   },

@@ -30,6 +30,7 @@ class ProfileDefaults(BaseModel):
     retry_after_s: float = 1.0
     hang_s: float = 30.0
     warmup_ok: int = 0
+    max_concurrency: int = Field(default=0, ge=0)
 
 
 class ProfileSpec(BaseModel):
@@ -42,6 +43,11 @@ class ProfileSpec(BaseModel):
     retry_after_s: float = 1.0
     hang_s: float = 30.0
     warmup_ok: int = 0
+    #: Сколько запросов апстрим обслуживает одновременно; 0 — без ограничения.
+    #: Сверх лимита он отвечает 503 с Retry-After, как настоящий провайдер,
+    #: у которого кончилась квота конкурентности. Это единственный вид отказа,
+    #: который не берётся из колоды: он зависит от нагрузки, а не от номера запроса.
+    max_concurrency: int = Field(default=0, ge=0)
 
     @model_validator(mode="after")
     def _validate(self) -> ProfileSpec:

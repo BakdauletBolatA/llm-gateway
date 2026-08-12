@@ -108,7 +108,16 @@ def settings_with(**reliability: dict[str, Any]) -> Settings:
     chain later.
     """
     tree = load_settings("config/gateway.yaml").model_dump()
-    for section in ("timeouts", "retries", "circuit_breaker", "fallback", "hedging", "cache"):
+    for section in (
+        "timeouts",
+        "retries",
+        "circuit_breaker",
+        "fallback",
+        "hedging",
+        "bulkhead",
+        "rate_limit",
+        "cache",
+    ):
         tree["reliability"][section]["enabled"] = False
     for section, patch in reliability.items():
         tree["reliability"][section].update(patch)
