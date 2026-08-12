@@ -114,9 +114,7 @@ def settings_with(**reliability: dict[str, Any]) -> Settings:
     return Settings.model_validate(tree)
 
 
-def build(
-    settings: Settings, adapters: dict[str, StubAdapter]
-) -> tuple[Orchestrator, StubBudget]:
+def build(settings: Settings, adapters: dict[str, StubAdapter]) -> tuple[Orchestrator, StubBudget]:
     registry = StubRegistry(adapters)
     breakers = BreakerRegistry(settings.reliability.circuit_breaker, list(adapters))
     budget = StubBudget()
@@ -131,9 +129,7 @@ def build(
     return orchestrator, budget
 
 
-REQUEST = ChatCompletionRequest(
-    messages=[ChatMessage(role="user", content="hi")], temperature=0.0
-)
+REQUEST = ChatCompletionRequest(messages=[ChatMessage(role="user", content="hi")], temperature=0.0)
 
 
 # -- timeouts -----------------------------------------------------------------
@@ -179,9 +175,7 @@ async def test_deadline_stops_the_chain_before_trying_the_next_provider() -> Non
         retries={"enabled": False},
         fallback={"enabled": True},
     )
-    slow = StubAdapter(
-        "mock_primary", script=[provider_error(ErrorKind.SERVER_ERROR)], delay_s=0.2
-    )
+    slow = StubAdapter("mock_primary", script=[provider_error(ErrorKind.SERVER_ERROR)], delay_s=0.2)
     spare = StubAdapter("mock_secondary")
     third = StubAdapter("mock_tertiary")
     orchestrator, _ = build(

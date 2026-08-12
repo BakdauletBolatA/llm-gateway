@@ -34,7 +34,9 @@ def allocate(weights: dict[Outcome, int], deck_size: int) -> dict[Outcome, int]:
     shortfall = deck_size - sum(counts.values())
     if shortfall > 0:
         by_remainder = sorted(
-            exact, key=lambda outcome: (exact[outcome] - counts[outcome], str(outcome)), reverse=True
+            exact,
+            key=lambda outcome: (exact[outcome] - counts[outcome], str(outcome)),
+            reverse=True,
         )
         for outcome in by_remainder[:shortfall]:
             counts[outcome] += 1
@@ -87,8 +89,11 @@ class UpstreamState:
         if self._served <= self.profile.warmup_ok:
             # Warm-up window: always healthy, so a circuit breaker can observe a
             # provider that works and only then starts failing.
-            card = Card(outcome=Outcome.OK, latency_ms=self.profile.latency_ms[0],
-                        completion_tokens=self.profile.completion_tokens[0])
+            card = Card(
+                outcome=Outcome.OK,
+                latency_ms=self.profile.latency_ms[0],
+                completion_tokens=self.profile.completion_tokens[0],
+            )
         else:
             card = self._deck[self._cursor % len(self._deck)]
             self._cursor += 1

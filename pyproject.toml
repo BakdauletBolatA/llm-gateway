@@ -45,8 +45,11 @@ target-version = "py312"
 src = ["src", "tests"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "SIM", "C4", "RUF"]
-ignore = ["B008"]
+select = ["E", "F", "I", "UP", "B", "SIM", "C4", "RUF", "SLF"]
+# B008: FastAPI dependencies are function calls in defaults by design.
+# RUF001/RUF003: documentation and log messages are in Russian, so Cyrillic
+# characters that look like Latin ones are intentional.
+ignore = ["B008", "RUF001", "RUF003"]
 
 [tool.mypy]
 python_version = "3.12"

@@ -46,14 +46,14 @@ test: install ## Юнит-тесты
 
 .PHONY: lint
 lint: install ## ruff + mypy
-	$(VENV)/bin/ruff check src tests
-	$(VENV)/bin/ruff format --check src tests
+	$(VENV)/bin/ruff check src tests scripts
+	$(VENV)/bin/ruff format --check src tests scripts
 	$(VENV)/bin/mypy
 
 .PHONY: fmt
 fmt: install ## Автоформат
-	$(VENV)/bin/ruff format src tests
-	$(VENV)/bin/ruff check --fix src tests
+	$(VENV)/bin/ruff format src tests scripts
+	$(VENV)/bin/ruff check --fix src tests scripts
 
 .PHONY: bench
 bench: ## Прогнать все сценарии хаоса: make bench LABEL=03_retries
@@ -66,3 +66,11 @@ report: ## Пересобрать таблицы в RELIABILITY.md из bench/re
 .PHONY: smoke-ollama
 smoke-ollama: ## Проверить, что живой провайдер Ollama отвечает через шлюз
 	./scripts/smoke_ollama.sh
+
+.PHONY: ablations
+ablations: ## Ablation-прогоны: выключить по одному механизму из финальной сборки
+	./scripts/run_ablations.sh
+
+.PHONY: ci-smoke
+ci-smoke: ## Короткий хаос-прогон с проверкой инвариантов (то же, что в CI)
+	./scripts/ci_smoke.sh

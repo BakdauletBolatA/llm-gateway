@@ -66,9 +66,7 @@ class OpenAIAdapter:
         payload = decode_json(response, provider=self.name, model=model)
         choices = payload.get("choices")
         if not isinstance(choices, list) or not choices:
-            raise schema_error(
-                "response has no choices[]", provider=self.name, model=model
-            )
+            raise schema_error("response has no choices[]", provider=self.name, model=model)
         message = choices[0].get("message") if isinstance(choices[0], dict) else None
         if not isinstance(message, dict) or not isinstance(message.get("content"), str):
             raise schema_error(

@@ -186,9 +186,7 @@ def _state_payload(app: FastAPI) -> dict[str, Any]:
     state: MockState = app.state.mock
     return {
         "scenario": state.scenario,
-        "upstreams": [
-            state.upstreams[name].snapshot() for name in sorted(state.upstreams)
-        ],
+        "upstreams": [state.upstreams[name].snapshot() for name in sorted(state.upstreams)],
     }
 
 
@@ -203,9 +201,7 @@ async def _read_json(request: Request) -> dict[str, Any]:
 def _openai_prompt(body: dict[str, Any]) -> str:
     messages = body.get("messages") or []
     parts = [
-        f"{m.get('role', 'user')}: {m.get('content', '')}"
-        for m in messages
-        if isinstance(m, dict)
+        f"{m.get('role', 'user')}: {m.get('content', '')}" for m in messages if isinstance(m, dict)
     ]
     return "\n".join(parts)
 
@@ -218,9 +214,7 @@ def _anthropic_prompt(body: dict[str, Any]) -> str:
     return "\n".join(part for part in parts if part)
 
 
-async def _serve(
-    app: FastAPI, upstream: str, prompt: str, model: str, dialect: str
-) -> Response:
+async def _serve(app: FastAPI, upstream: str, prompt: str, model: str, dialect: str) -> Response:
     state: MockState = app.state.mock
     upstream_state = state.upstream(upstream)
     spec = upstream_state.profile

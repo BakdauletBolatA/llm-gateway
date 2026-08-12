@@ -325,6 +325,5 @@ class Orchestrator:
                 )
 
         raise progress.apply_to(
-            last_error
-            or NoProviderAvailableError("no provider in the chain accepted the request")
+            last_error or NoProviderAvailableError("no provider in the chain accepted the request")
         )

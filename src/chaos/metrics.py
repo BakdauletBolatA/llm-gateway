@@ -79,9 +79,7 @@ class RunAggregate:
             "breaker_skips_total": sum(o.breaker_skips for o in self.observations),
             "cache_hits": sum(1 for o in self.observations if o.cache_hit),
             "cache_hit_rate": (
-                round(sum(1 for o in self.observations if o.cache_hit) / total, 4)
-                if total
-                else 0.0
+                round(sum(1 for o in self.observations if o.cache_hit) / total, 4) if total else 0.0
             ),
             "cost_usd_client": round(sum(o.cost_usd for o in self.observations), 6),
             "outcomes": dict(sorted(Counter(o.outcome for o in self.observations).items())),

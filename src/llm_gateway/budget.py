@@ -142,17 +142,20 @@ class BudgetTracker:
 
         key_limit = self._limit_for(api_key_id)
         counter = self._counter_for(api_key_id)
-        if key_limit is not None and counter is not None:
-            if counter.spent + estimated_cost_usd > key_limit:
-                raise BudgetExceededError(
-                    (
-                        f"budget for API key {api_key_id!r} is exhausted: "
-                        f"spent ${counter.spent:.4f} of ${key_limit:.2f}"
-                    ),
-                    spent_usd=round(counter.spent, 6),
-                    limit_usd=key_limit,
-                    period=self._config.period,
-                )
+        if (
+            key_limit is not None
+            and counter is not None
+            and counter.spent + estimated_cost_usd > key_limit
+        ):
+            raise BudgetExceededError(
+                (
+                    f"budget for API key {api_key_id!r} is exhausted: "
+                    f"spent ${counter.spent:.4f} of ${key_limit:.2f}"
+                ),
+                spent_usd=round(counter.spent, 6),
+                limit_usd=key_limit,
+                period=self._config.period,
+            )
 
     def record_spend(self, cost_usd: float, api_key_id: str | None = None) -> None:
         if cost_usd <= 0:

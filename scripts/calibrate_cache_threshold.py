@@ -21,8 +21,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from chaos.workload import TOPICS, build_workload  # noqa: E402
-from llm_gateway.cache.embedder import HashingEmbedder, cosine_similarity  # noqa: E402
+from chaos.workload import TOPICS, build_workload
+from llm_gateway.cache.embedder import HashingEmbedder, cosine_similarity
 
 THRESHOLDS = [0.5, 0.55, 0.6, 0.65, 0.7, 0.8, 0.9, 0.93]
 
@@ -31,9 +31,7 @@ def main() -> int:
     embedder = HashingEmbedder(256)
     vectors = [[embedder.embed_sync(variant) for variant in topic] for topic in TOPICS]
 
-    within = sorted(
-        cosine_similarity(a, b) for topic in vectors for a, b in combinations(topic, 2)
-    )
+    within = sorted(cosine_similarity(a, b) for topic in vectors for a, b in combinations(topic, 2))
     cross = sorted(
         cosine_similarity(a, b)
         for i in range(len(vectors))
@@ -78,9 +76,7 @@ def main() -> int:
                     wrong += 1
             else:
                 store.append((vector, prompt))
-        print(
-            f"{threshold:>10.2f} {hits / len(prompts):>8.1%} {len(store):>8} {wrong:>14}"
-        )
+        print(f"{threshold:>10.2f} {hits / len(prompts):>8.1%} {len(store):>8} {wrong:>14}")
     return 0
 
 

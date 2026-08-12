@@ -252,7 +252,9 @@ async def main_async(args: argparse.Namespace) -> int:
         print("nothing to run: pass --scenario NAME (repeatable) or --all")
         return 2
 
-    print(f"chaos run label={args.label} scenarios={len(scenarios)} n={args.n} c={args.concurrency}")
+    print(
+        f"chaos run label={args.label} scenarios={len(scenarios)} n={args.n} c={args.concurrency}"
+    )
     out_dir = Path(args.out)
     for index, scenario in enumerate(scenarios):
         result = await run_scenario(
@@ -280,7 +282,9 @@ async def main_async(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="chaos.run", description="Chaos harness for llm-gateway")
     parser.add_argument("--label", required=True, help="iteration label, e.g. 01_baseline")
-    parser.add_argument("--scenario", action="append", default=[], help="scenario name (repeatable)")
+    parser.add_argument(
+        "--scenario", action="append", default=[], help="scenario name (repeatable)"
+    )
     parser.add_argument("--all", action="store_true", help="run every default scenario")
     parser.add_argument("--n", type=int, default=150, help="requests per scenario")
     parser.add_argument("--concurrency", type=int, default=15)

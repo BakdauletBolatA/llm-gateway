@@ -79,9 +79,7 @@ def mock_app() -> FastAPI:
 
 
 @asynccontextmanager
-async def running_stack(
-    settings: Settings, mock_app: FastAPI
-) -> AsyncIterator[dict[str, Any]]:
+async def running_stack(settings: Settings, mock_app: FastAPI) -> AsyncIterator[dict[str, Any]]:
     if not await _database_available(TEST_DSN):
         pytest.skip(f"PostgreSQL not reachable at {TEST_DSN}")
 

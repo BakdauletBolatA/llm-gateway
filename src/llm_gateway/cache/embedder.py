@@ -15,6 +15,7 @@ embedding model when Ollama is running.
 from __future__ import annotations
 
 import hashlib
+import itertools
 import math
 import re
 from typing import Protocol
@@ -68,7 +69,7 @@ class HashingEmbedder:
         for word in words:
             bucket, sign = _bucket_and_sign(f"w:{word}", self.dim)
             vector[bucket] += sign * WORD_WEIGHT
-        for left, right in zip(words, words[1:], strict=False):
+        for left, right in itertools.pairwise(words):
             bucket, sign = _bucket_and_sign(f"b:{left}_{right}", self.dim)
             vector[bucket] += sign * BIGRAM_WEIGHT
 
@@ -99,9 +100,7 @@ class OllamaEmbedder:
         self._client = client
 
     async def embed(self, text: str) -> list[float]:
-        response = await self._client.post(
-            self._url, json={"model": self.model, "prompt": text}
-        )
+        response = await self._client.post(self._url, json={"model": self.model, "prompt": text})
         response.raise_for_status()
         payload = response.json()
         vector = [float(value) for value in payload["embedding"]]

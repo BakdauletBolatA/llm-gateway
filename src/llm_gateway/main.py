@@ -74,9 +74,7 @@ async def build_state(settings: Settings) -> AppState:
         await migrate.upgrade(settings.database.dsn)
 
     registry = ProviderRegistry(settings)
-    breakers = BreakerRegistry(
-        settings.reliability.circuit_breaker, registry.enabled_providers()
-    )
+    breakers = BreakerRegistry(settings.reliability.circuit_breaker, registry.enabled_providers())
     embedder, embed_client = _build_embedder(settings)
     cache = SemanticCache(settings.reliability.cache, embedder, database)
     budget = BudgetTracker(settings.budget, settings.auth, database)
@@ -136,7 +134,8 @@ def registry_summary(state: AppState) -> list[str]:
 
 
 def get_state(request: Request) -> AppState:
-    return request.app.state.core  # type: ignore[no-any-return]
+    state: AppState = request.app.state.core
+    return state
 
 
 def authenticate(
@@ -419,7 +418,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             async with state.database.session() as session:
                 result = await session.execute(sql_text("DELETE FROM semantic_cache"))
                 await session.commit()
-                cleared = result.rowcount or 0
+                cleared = int(getattr(result, "rowcount", 0) or 0)
             state.cache.lookups = 0
             state.cache.hits = 0
             state.cache.stores = 0

@@ -195,7 +195,7 @@ class SemanticCache:
             with contextlib.suppress(TimeoutError):
                 await asyncio.wait(pending, timeout=timeout)
 
-    def stats(self) -> dict[str, float | int]:
+    def stats(self) -> dict[str, Any]:
         hit_rate = self.hits / self.lookups if self.lookups else 0.0
         return {
             "enabled": self.config.enabled,

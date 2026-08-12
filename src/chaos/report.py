@@ -99,11 +99,7 @@ def _flags(run: dict[str, Any]) -> str:
 
 
 def build_section(results: list[dict[str, Any]]) -> str:
-    iterations = [
-        r
-        for r in results
-        if not r["label"].startswith((ABLATION_PREFIX, EXTRA_PREFIX))
-    ]
+    iterations = [r for r in results if not r["label"].startswith((ABLATION_PREFIX, EXTRA_PREFIX))]
     ablations = [r for r in results if r["label"].startswith(ABLATION_PREFIX)]
     extras = [r for r in results if r["label"].startswith(EXTRA_PREFIX)]
 
@@ -161,7 +157,9 @@ def build_section(results: list[dict[str, Any]]) -> str:
     )
 
     parts.append("\n### Success rate по сценариям\n")
-    parts.append(_matrix(iterations, labels, scenarios, lambda r: _pct(r["results"]["success_rate"])))
+    parts.append(
+        _matrix(iterations, labels, scenarios, lambda r: _pct(r["results"]["success_rate"]))
+    )
 
     parts.append("\n### p95 latency, мс\n")
     parts.append(
@@ -188,12 +186,12 @@ def build_section(results: list[dict[str, Any]]) -> str:
         rows = []
         for label in ablation_labels:
             for scenario in ablation_scenarios:
-                run = next(
-                    (r for r in ablations if r["label"] == label and r["scenario"] == scenario),
-                    None,
-                )
-                if run is None:
+                matches = [
+                    r for r in ablations if r["label"] == label and r["scenario"] == scenario
+                ]
+                if not matches:
                     continue
+                run = matches[0]
                 summary = run["results"]
                 rows.append(
                     [
@@ -227,9 +225,7 @@ def build_section(results: list[dict[str, Any]]) -> str:
 
     if extras:
         parts.append("\n### Дополнительные замеры\n")
-        parts.append(
-            "Прогоны с другими параметрами нагрузки — не часть матрицы итераций.\n"
-        )
+        parts.append("Прогоны с другими параметрами нагрузки — не часть матрицы итераций.\n")
         rows = []
         for run in sorted(extras, key=lambda r: (r["label"], r["scenario"])):
             summary = run["results"]

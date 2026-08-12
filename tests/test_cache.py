@@ -32,8 +32,9 @@ async def test_the_same_question_twice_is_served_from_cache(
 
     assert first.headers["x-gateway-cache"] == "miss"
     assert second.headers["x-gateway-cache"] == "hit"
-    assert second.json()["choices"][0]["message"]["content"] == (
-        first.json()["choices"][0]["message"]["content"]
+    assert (
+        second.json()["choices"][0]["message"]["content"]
+        == (first.json()["choices"][0]["message"]["content"])
     )
     assert float(second.headers["x-gateway-cost-usd"]) == 0.0
     assert second.headers["x-gateway-attempts"] == "0", "a hit must not call a provider"
@@ -91,9 +92,7 @@ async def test_entries_are_scoped_and_counted(cache_stack: dict[str, Any]) -> No
 
     async with cache_stack["state"].database.session() as session:
         row = (
-            await session.execute(
-                text("SELECT scope, hits, provider FROM semantic_cache LIMIT 1")
-            )
+            await session.execute(text("SELECT scope, hits, provider FROM semantic_cache LIMIT 1"))
         ).one()
     assert row.scope == "chaos-default:mock-gpt-4o-mini"
     assert row.hits >= 1

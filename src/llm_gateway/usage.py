@@ -6,14 +6,13 @@ from datetime import datetime
 from typing import Any, Literal
 
 from sqlalchemy import Float, Integer, cast, func, select
-from sqlalchemy.sql.elements import ColumnElement
 
 from llm_gateway.db.models import LlmCall
 from llm_gateway.db.session import Database
 
 GroupBy = Literal["none", "provider", "model", "route", "api_key", "day"]
 
-_GROUPING: dict[str, ColumnElement[Any] | None] = {
+_GROUPING: dict[str, Any] = {
     "none": None,
     "provider": LlmCall.provider,
     "model": LlmCall.model,
@@ -23,7 +22,7 @@ _GROUPING: dict[str, ColumnElement[Any] | None] = {
 }
 
 
-def _metrics() -> list[ColumnElement[Any]]:
+def _metrics() -> list[Any]:
     success = func.sum(cast(LlmCall.outcome == "success", Integer))
     return [
         func.count().label("requests"),
