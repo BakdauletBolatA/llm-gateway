@@ -1,0 +1,27 @@
+# Итерация 6 — семантический кэш на pgvector.
+#
+# Похожесть считается косинусным расстоянием в pgvector внутри scope
+# (маршрут + модель), с фильтром по TTL и явным порогом: ближайший сосед
+# становится попаданием только если он достаточно близко.
+#
+# Порог 0.60 выбран замером, а не на глаз: scripts/calibrate_cache_threshold.py
+# показывает, что максимальная похожесть двух РАЗНЫХ вопросов у этого эмбеддера
+# равна 0.539. Порог ниже начинает отдавать ответы не на тот вопрос.
+#
+# max_temperature: запрос с высокой температурой клиент просил «творческий»,
+# и отдавать ему сохранённый ответ — молча ломать его ожидание.
+reliability:
+  timeouts:
+    enabled: true
+  retries:
+    enabled: true
+  circuit_breaker:
+    enabled: true
+  fallback:
+    enabled: true
+  cache:
+    enabled: true
+    similarity_threshold: 0.60
+    ttl_s: 900
+    max_temperature: 0.3
+    embedder: hashing

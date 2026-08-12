@@ -18,6 +18,9 @@ from typing import Any
 BEGIN_MARKER = "<!-- BEGIN:GENERATED -->"
 END_MARKER = "<!-- END:GENERATED -->"
 ABLATION_PREFIX = "ablation"
+#: Прогоны, которые отвечают на отдельный вопрос и не должны попадать в матрицу
+#: итераций (другой N, другая конкурентность и т.п.).
+EXTRA_PREFIX = "extra"
 
 
 def load_results(results_dir: Path) -> list[dict[str, Any]]:
@@ -96,8 +99,13 @@ def _flags(run: dict[str, Any]) -> str:
 
 
 def build_section(results: list[dict[str, Any]]) -> str:
-    iterations = [r for r in results if not r["label"].startswith(ABLATION_PREFIX)]
+    iterations = [
+        r
+        for r in results
+        if not r["label"].startswith((ABLATION_PREFIX, EXTRA_PREFIX))
+    ]
     ablations = [r for r in results if r["label"].startswith(ABLATION_PREFIX)]
+    extras = [r for r in results if r["label"].startswith(EXTRA_PREFIX)]
 
     labels = sorted({r["label"] for r in iterations}, key=_sort_key)
     scenarios = sorted({r["scenario"] for r in iterations})
@@ -217,9 +225,50 @@ def build_section(results: list[dict[str, Any]]) -> str:
             )
         )
 
+    if extras:
+        parts.append("\n### Дополнительные замеры\n")
+        parts.append(
+            "Прогоны с другими параметрами нагрузки — не часть матрицы итераций.\n"
+        )
+        rows = []
+        for run in sorted(extras, key=lambda r: (r["label"], r["scenario"])):
+            summary = run["results"]
+            rows.append(
+                [
+                    f"`{run['label']}`",
+                    f"`{run['scenario']}`",
+                    f"{summary['requests']} x{run['concurrency']}",
+                    _pct(summary["success_rate"]),
+                    f"{summary['latency_ms']['p50']:.0f}",
+                    f"{summary['latency_ms']['p95']:.0f}",
+                    f"{summary['latency_ms']['max']:.0f}",
+                    str(summary["cache_hits"]),
+                    f"{summary['cost_usd_server']:.4f}",
+                    run.get("note") or "",
+                ]
+            )
+        parts.append(
+            _table(
+                [
+                    "прогон",
+                    "сценарий",
+                    "нагрузка",
+                    "success",
+                    "p50",
+                    "p95",
+                    "max",
+                    "кэш",
+                    "$",
+                    "зачем",
+                ],
+                rows,
+            )
+        )
+
     parts.append("\n### Полная детализация\n")
     detail_rows = []
-    for run in sorted(results, key=lambda r: (_sort_key(r["label"]), r["scenario"])):
+    detail_source = iterations + ablations
+    for run in sorted(detail_source, key=lambda r: (_sort_key(r["label"]), r["scenario"])):
         summary = run["results"]
         detail_rows.append(
             [

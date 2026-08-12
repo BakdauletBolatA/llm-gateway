@@ -123,6 +123,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     try:
         yield
     finally:
+        await state.cache.drain()
         await state.recorder.stop()
         await state.registry.aclose()
         if state.embed_client is not None:
@@ -414,6 +415,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         state.breakers.reset()
         cleared = 0
         if cache:
+            await state.cache.drain()
             async with state.database.session() as session:
                 result = await session.execute(sql_text("DELETE FROM semantic_cache"))
                 await session.commit()

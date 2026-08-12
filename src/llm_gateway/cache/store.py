@@ -7,10 +7,14 @@ nearest neighbour is only a hit if it is close enough.
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import hashlib
 import logging
+from collections.abc import Coroutine
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from sqlalchemy import select, update
 
@@ -39,6 +43,7 @@ class SemanticCache:
         self.config = config
         self.embedder = embedder
         self._db = database
+        self._pending: set[asyncio.Task[None]] = set()
         self.lookups = 0
         self.hits = 0
         self.stores = 0
@@ -82,13 +87,10 @@ class SemanticCache:
                 if similarity < self.config.similarity_threshold:
                     return None
 
-                await session.execute(
-                    update(SemanticCacheEntry)
-                    .where(SemanticCacheEntry.id == entry.id)
-                    .values(hits=SemanticCacheEntry.hits + 1)
-                )
-                await session.commit()
-
+            # The hit counter is a metric, not part of the answer. Incrementing it
+            # inline takes a row lock on the most popular entry — with a Zipf-shaped
+            # workload that is exactly the row every concurrent request wants.
+            self._spawn(self._bump_hits(entry.id))
             self.hits += 1
             return CacheHit(
                 text=entry.response_text,
@@ -162,6 +164,36 @@ class SemanticCache:
         except Exception:
             self.errors += 1
             logger.exception("semantic cache store failed for scope=%s", scope)
+
+    async def _bump_hits(self, entry_id: int) -> None:
+        async with self._db.session() as session:
+            await session.execute(
+                update(SemanticCacheEntry)
+                .where(SemanticCacheEntry.id == entry_id)
+                .values(hits=SemanticCacheEntry.hits + 1)
+            )
+            await session.commit()
+
+    def _spawn(self, coro: Coroutine[Any, Any, None]) -> None:
+        task = asyncio.create_task(coro)
+        self._pending.add(task)
+        task.add_done_callback(self._pending.discard)
+
+    def store_later(self, **kwargs: Any) -> None:
+        """Write to the cache off the request's critical path.
+
+        A client should not wait for a cache whose whole purpose is to make
+        things faster. The trade-off is a short window in which a repeated
+        prompt still misses because the first answer has not landed yet.
+        """
+        self._spawn(self.store(**kwargs))
+
+    async def drain(self, timeout: float = 5.0) -> None:
+        """Wait for in-flight writes — used on shutdown and between chaos runs."""
+        pending = set(self._pending)
+        if pending:
+            with contextlib.suppress(TimeoutError):
+                await asyncio.wait(pending, timeout=timeout)
 
     def stats(self) -> dict[str, float | int]:
         hit_rate = self.hits / self.lookups if self.lookups else 0.0

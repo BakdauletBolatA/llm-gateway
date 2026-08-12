@@ -297,7 +297,7 @@ class Orchestrator:
                 self.budget.record_spend(cost, api_key_id)
 
                 if cacheable:
-                    await self.cache.store(
+                    self.cache.store_later(
                         scope=scope,
                         prompt=prompt,
                         response_text=response.text,
