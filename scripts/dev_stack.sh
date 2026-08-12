@@ -34,13 +34,38 @@ start_one() {
   echo "$name started on :$port (pid $!)"
 }
 
+stop_one() {
+  local name="$1"
+  [[ -f "$RUN_DIR/$name.pid" ]] || return 0
+  local pid
+  pid="$(cat "$RUN_DIR/$name.pid")"
+  rm -f "$RUN_DIR/$name.pid"
+  kill "$pid" 2>/dev/null || true
+  # Ждём фактического выхода, а не только доставки сигнала: uvicorn закрывает
+  # порт на shutdown, и без ожидания следующий `up` не сможет забиндиться —
+  # при этом старый процесс ещё отвечает на /healthz, поэтому проблема
+  # выглядит как загадочный ConnectError посреди прогона.
+  for _ in $(seq 40); do
+    kill -0 "$pid" 2>/dev/null || { echo "$name stopped"; return 0; }
+    sleep 0.25
+  done
+  kill -9 "$pid" 2>/dev/null || true
+  echo "$name killed (не завершился за 10s)"
+}
+
 wait_for() {
-  local url="$1" tries="${2:-60}"
+  local url="$1" name="$2" tries="${3:-60}"
   for _ in $(seq "$tries"); do
     if curl -fsS "$url" >/dev/null 2>&1; then return 0; fi
+    if [[ -f "$RUN_DIR/$name.pid" ]] && ! kill -0 "$(cat "$RUN_DIR/$name.pid")" 2>/dev/null; then
+      echo "$name умер на старте; последние строки $RUN_DIR/$name.log:" >&2
+      tail -n 20 "$RUN_DIR/$name.log" | tr -d '\0' >&2
+      return 1
+    fi
     sleep 0.5
   done
   echo "timed out waiting for $url" >&2
+  tail -n 20 "$RUN_DIR/$name.log" | tr -d '\0' >&2
   return 1
 }
 
@@ -48,18 +73,13 @@ case "${1:-up}" in
   up)
     start_one mock "mock_provider.main:create_app" "$MOCK_PORT"
     start_one gateway "llm_gateway.main:create_app" "$GATEWAY_PORT"
-    wait_for "http://127.0.0.1:$MOCK_PORT/healthz"
-    wait_for "http://127.0.0.1:$GATEWAY_PORT/healthz"
+    wait_for "http://127.0.0.1:$MOCK_PORT/healthz" mock
+    wait_for "http://127.0.0.1:$GATEWAY_PORT/healthz" gateway
     echo "stack is up: gateway http://127.0.0.1:$GATEWAY_PORT  mock http://127.0.0.1:$MOCK_PORT"
     ;;
   down)
     for name in gateway mock; do
-      if [[ -f "$RUN_DIR/$name.pid" ]]; then
-        pid="$(cat "$RUN_DIR/$name.pid")"
-        kill "$pid" 2>/dev/null || true
-        rm -f "$RUN_DIR/$name.pid"
-        echo "$name stopped"
-      fi
+      stop_one "$name"
     done
     ;;
   status)
