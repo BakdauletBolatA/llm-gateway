@@ -1,0 +1,129 @@
+# Профили отказов мок-провайдера.
+#
+# Инъекция отказов детерминирована: из весов собирается «колода» на deck_size карт,
+# перемешивается ГПСЧ с фиксированным сидом и раздаётся по кругу. Поэтому за N запросов
+# доли исходов воспроизводятся точно, а не «примерно» — иначе таблицу в RELIABILITY.md
+# нельзя было бы сравнивать между итерациями.
+#
+# Виды исходов (outcomes):
+#   ok          — нормальный ответ с правдоподобным usage
+#   http_429    — 429 с заголовком Retry-After
+#   http_500    — 500 internal error
+#   http_503    — 503 overloaded
+#   conn_abort  — соединение рвётся на середине тела ответа
+#   bad_json    — HTTP 200, Content-Type: application/json, тело — невалидный JSON
+#   bad_schema  — HTTP 200, валидный JSON, но без ожидаемых полей (пустой choices/content)
+#   hang        — ответ приходит через hang_s секунд, то есть дольше любого таймаута
+
+seed: 20260812
+
+defaults:
+  deck_size: 100
+  latency_ms: [40, 120]
+  completion_tokens: [48, 160]
+  retry_after_s: 1
+  hang_s: 30
+  # Сколько первых запросов после переключения профиля всегда успешны.
+  # Нужно, чтобы circuit breaker успел «прогреться» на живом апстриме.
+  warmup_ok: 0
+
+profiles:
+  healthy:
+    description: Всё работает, латентность нормальная.
+    outcomes: {ok: 100}
+
+  rate_limited:
+    description: Провайдер режет по квоте, отдаёт 429 с Retry-After.
+    outcomes: {ok: 40, http_429: 60}
+    retry_after_s: 1
+
+  flaky_500:
+    description: Нестабильный бэкенд провайдера, 5xx примерно на половине запросов.
+    outcomes: {ok: 50, http_500: 35, http_503: 15}
+
+  bad_json:
+    description: Ответ 200, но тело нельзя распарсить либо в нём нет полезной нагрузки.
+    outcomes: {ok: 50, bad_json: 30, bad_schema: 20}
+
+  conn_reset:
+    description: Соединение обрывается на середине тела ответа.
+    outcomes: {ok: 50, conn_abort: 50}
+
+  slow:
+    description: Ошибок нет, но латентность 1.5–3 с — типичная деградация под нагрузкой.
+    outcomes: {ok: 100}
+    latency_ms: [1500, 3000]
+
+  hang:
+    description: Часть запросов зависает дольше любого разумного таймаута.
+    outcomes: {ok: 80, hang: 20}
+    hang_s: 30
+
+  storm:
+    description: Всё сразу — самый тяжёлый профиль, ~70% запросов проблемные.
+    outcomes:
+      ok: 30
+      http_429: 15
+      http_500: 15
+      http_503: 5
+      conn_abort: 15
+      bad_json: 10
+      bad_schema: 5
+      hang: 5
+    retry_after_s: 1
+    hang_s: 30
+
+  total_outage:
+    description: Провайдер лежит полностью.
+    outcomes: {http_500: 100}
+    latency_ms: [10, 30]
+
+  degraded_then_dead:
+    description: Первые запросы проходят, дальше апстрим умирает — сценарий для circuit breaker.
+    outcomes: {http_500: 100}
+    latency_ms: [10, 30]
+    warmup_ok: 10
+
+# Сценарий — это назначение профилей на апстримы мока. Именно сценарии
+# гоняет харнесс и именно они становятся строками таблицы в RELIABILITY.md.
+scenarios:
+  healthy:
+    primary: healthy
+    secondary: healthy
+    tertiary: healthy
+  rate_limited:
+    primary: rate_limited
+    secondary: healthy
+    tertiary: healthy
+  flaky_500:
+    primary: flaky_500
+    secondary: healthy
+    tertiary: healthy
+  bad_json:
+    primary: bad_json
+    secondary: healthy
+    tertiary: healthy
+  conn_reset:
+    primary: conn_reset
+    secondary: healthy
+    tertiary: healthy
+  slow:
+    primary: slow
+    secondary: healthy
+    tertiary: healthy
+  hang:
+    primary: hang
+    secondary: healthy
+    tertiary: healthy
+  storm:
+    primary: storm
+    secondary: healthy
+    tertiary: healthy
+  primary_outage:
+    primary: degraded_then_dead
+    secondary: healthy
+    tertiary: healthy
+  total_outage:
+    primary: total_outage
+    secondary: total_outage
+    tertiary: total_outage
