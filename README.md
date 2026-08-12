@@ -129,6 +129,7 @@ scripts/             стенд без Docker, ablation, CI-смоук, кали
 | `GET /v1/config` | эффективная конфигурация надёжности без секретов |
 | `GET /v1/reliability/state` | состояние circuit breaker'ов, статистика кэша, бюджет |
 | `POST /v1/reliability/reset` | сброс брейкеров (и кэша с `?cache=true`) между прогонами |
+| `GET /metrics` | метрики в формате Prometheus |
 | `GET /healthz`, `GET /readyz` | живость и готовность (проверка БД) |
 
 Каждый ответ несёт телеметрию в заголовках — по ним харнесс и считает метрики,
@@ -140,6 +141,44 @@ X-Gateway-Retries: 0                   X-Gateway-Fallbacks: 1
 X-Gateway-Breaker-Skips: 1             X-Gateway-Hedges: 1
 X-Gateway-Cache: miss                  X-Gateway-Cost-Usd: 0.000512
 X-Gateway-Latency-Ms: 214
+```
+
+### Наблюдаемость
+
+Один и тот же факт о запросе уезжает в три места и не должен расходиться:
+заголовки ответа (их читает хаос-харнесс), Postgres (журнал вызовов и попыток) и
+`/metrics` (Prometheus). Метрики собираются из тех же записей о попытках, что и
+строки в БД, — не из отдельных счётчиков.
+
+```bash
+curl -s localhost:8080/metrics | grep -E '^llm_gateway_(requests|provider_calls|cost)'
+```
+
+| метрика | зачем она нужна |
+|---|---|
+| `llm_gateway_requests_total{route,outcome}` | доступность по маршрутам |
+| `llm_gateway_request_errors_total{route,kind}` | по какой именно причине отказ |
+| `llm_gateway_request_duration_seconds{route}` | гистограмма с бакетами под этот сервис |
+| `llm_gateway_provider_calls_total{provider,outcome}` | `success`, `error`, `cancelled` (проиграл хеджу), `discarded`, `skipped_breaker` |
+| `llm_gateway_retries_total`, `_fallbacks_total`, `_hedges_total` | сколько работы стоила надёжность |
+| `llm_gateway_cost_usd_total{provider}` | деньги по провайдерам |
+| `llm_gateway_circuit_breaker_state{provider}` | 0 закрыт, 1 half-open, 2 открыт |
+| `llm_gateway_budget_spent_usd` / `_limit_usd` | насколько близко к отказу по бюджету |
+| `llm_gateway_recorder_queue_depth` / `_records_dropped` | не теряется ли журнал вызовов |
+
+Значения-состояния (брейкеры, бюджет, очередь журнала) заполняются в момент
+скрейпа из своих настоящих источников, а не дублируются счётчиками, — тогда им
+нечем разойтись с `/v1/reliability/state`.
+
+`LOG_FORMAT=json` переключает логи на JSON-строки — включая access-лог uvicorn,
+чтобы в одном процессе не было двух форматов. Строка об отказе несёт весь
+контекст запроса:
+
+```json
+{"ts": "2026-08-12T13:06:36.711+00:00", "level": "WARNING", "logger": "llm_gateway.main",
+ "message": "request failed: upstream returned 500", "request_id": "f6c8c2f0d60145a9",
+ "route": "chaos-default", "error_kind": "server_error", "http_status": 502,
+ "attempts": 9, "retries": 6, "fallbacks": 2, "hedges": 0, "latency_ms": 524}
 ```
 
 Ошибки типизированы: `429` (лимит провайдера), `402` (исчерпан бюджет),

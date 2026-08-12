@@ -215,6 +215,8 @@ class DatabaseConfig(BaseModel):
 class AppConfig(BaseModel):
     name: str = "llm-gateway"
     log_level: str = "INFO"
+    #: json — по одной строке-объекту на запись, для сбора логов; text — для человека.
+    log_format: Literal["text", "json"] = "text"
     slow_request_ms: int = 5000
 
 

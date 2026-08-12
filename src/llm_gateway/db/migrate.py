@@ -22,6 +22,8 @@ def _alembic_config(dsn: str) -> Config:
     config = Config(str(PROJECT_ROOT / "alembic.ini"))
     config.set_main_option("script_location", str(PROJECT_ROOT / "migrations"))
     config.set_main_option("sqlalchemy.url", dsn)
+    # Leave the app's logging alone: see the note in migrations/env.py.
+    config.attributes["configure_logging"] = False
     return config
 
 

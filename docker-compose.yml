@@ -56,6 +56,7 @@ services:
       GATEWAY_CONFIG: ${GATEWAY_CONFIG:-config/gateway.yaml}
       GATEWAY_CONFIG_OVERLAY: ${GATEWAY_CONFIG_OVERLAY:-}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_FORMAT: ${LOG_FORMAT:-text}
       # Реальные провайдеры включаются только если ключи заданы в .env
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_ENABLED: ${OPENAI_ENABLED:-false}

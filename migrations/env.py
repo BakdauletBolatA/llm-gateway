@@ -14,7 +14,11 @@ from llm_gateway.db.models import Base
 
 config = context.config
 
-if config.config_file_name is not None:
+# `alembic upgrade head` from a shell should use alembic.ini's logging. When the
+# gateway runs migrations at startup it has already configured logging itself, and
+# fileConfig() would replace it — alembic.ini sets the root logger to WARNING, so
+# every INFO line from the app after startup would be silently dropped.
+if config.config_file_name is not None and config.attributes.get("configure_logging", True):
     fileConfig(config.config_file_name)
 
 if not config.get_main_option("sqlalchemy.url", None):

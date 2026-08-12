@@ -10,6 +10,8 @@
 app:
   name: llm-gateway
   log_level: ${LOG_LEVEL:-INFO}
+  # json — по строке-объекту на запись (для сборщика логов), text — для человека.
+  log_format: ${LOG_FORMAT:-text}
   # Порог, после которого запрос считается «медленным» и логируется отдельно.
   slow_request_ms: 5000
 

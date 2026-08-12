@@ -12,9 +12,10 @@ from typing import Annotated, Any
 
 import httpx
 from fastapi import Depends, FastAPI, Header, Query, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from sqlalchemy import text as sql_text
 
+from llm_gateway import observability
 from llm_gateway.budget import BudgetTracker, period_start
 from llm_gateway.cache.embedder import Embedder, HashingEmbedder, OllamaEmbedder
 from llm_gateway.cache.store import SemanticCache
@@ -100,10 +101,7 @@ async def build_state(settings: Settings) -> AppState:
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings: Settings = app.state.settings
-    logging.basicConfig(
-        level=settings.app.log_level.upper(),
-        format="%(asctime)s %(levelname)-7s %(name)s: %(message)s",
-    )
+    observability.configure_logging(settings.app.log_level, settings.app.log_format)
     state = await build_state(settings)
     app.state.core = state
     logger.info(
@@ -252,6 +250,24 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             )
         except GatewayError as error:
             latency_ms = int((time.monotonic() - started) * 1000)
+            observability.observe_request(
+                route=route_name, latency_s=latency_ms / 1000, error=error
+            )
+            logger.warning(
+                "request failed: %s",
+                error.message,
+                extra={
+                    "request_id": request_id,
+                    "route": route_name,
+                    "error_kind": str(error.kind),
+                    "http_status": error.http_status,
+                    "attempts": error.attempts,
+                    "retries": error.retries,
+                    "fallbacks": error.fallbacks,
+                    "hedges": error.hedges,
+                    "latency_ms": latency_ms,
+                },
+            )
             state.recorder.submit(
                 CallRecord(
                     request_id=request_id,
@@ -289,13 +305,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             )
 
         latency_ms = int((time.monotonic() - started) * 1000)
+        observability.observe_request(route=route_name, latency_s=latency_ms / 1000, result=result)
         if latency_ms >= state.settings.app.slow_request_ms:
             logger.warning(
-                "slow request %s route=%s latency=%dms attempts=%d",
-                request_id,
-                route_name,
+                "slow request: %dms",
                 latency_ms,
-                result.attempts,
+                extra={
+                    "request_id": request_id,
+                    "route": route_name,
+                    "provider": result.provider,
+                    "attempts": result.attempts,
+                    "retries": result.retries,
+                    "fallbacks": result.fallbacks,
+                    "hedges": result.hedges,
+                    "cache_hit": result.cache_hit,
+                    "latency_ms": latency_ms,
+                },
             )
 
         state.recorder.submit(
@@ -433,6 +458,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             state.cache.stores = 0
             state.cache.errors = 0
         return {"status": "ok", "cache_entries_cleared": cleared}
+
+    @app.get("/metrics")
+    async def metrics(state: Annotated[AppState, Depends(get_state)]) -> Response:
+        """Prometheus exposition.
+
+        Unauthenticated, like the other ops endpoints — in a real deployment this
+        belongs behind a network policy, not behind an API key, because the scraper
+        is infrastructure and not a tenant.
+        """
+        observability.refresh_gauges(
+            breakers=state.breakers.snapshot(),
+            budget=state.budget.snapshot().__dict__,
+            recorder=state.recorder.stats(),
+        )
+        return Response(content=observability.render(), media_type=observability.CONTENT_TYPE)
 
     @app.get("/healthz")
     async def healthz(state: Annotated[AppState, Depends(get_state)]) -> dict[str, Any]:

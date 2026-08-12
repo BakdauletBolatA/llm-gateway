@@ -80,3 +80,20 @@ for scenario in ("healthy", "storm", "total_outage"):
         f"p95={result['latency_ms']['p95']:.0f}ms cost=${result['cost_usd_server']:.4f}"
     )
 PY
+
+# Метрики проверяются здесь, а не только в тестах: в тестах шлюз живёт под
+# ASGI-транспортом, а тут — настоящий процесс, который только что отработал нагрузку.
+echo "checking the Prometheus exposition"
+metrics="$(curl -fsS "${GATEWAY_URL:-http://127.0.0.1:8080}/metrics")"
+for family in \
+  llm_gateway_requests_total \
+  llm_gateway_request_duration_seconds_bucket \
+  llm_gateway_provider_calls_total \
+  llm_gateway_circuit_breaker_state \
+  llm_gateway_budget_spent_usd; do
+  if ! grep -q "^${family}" <<<"$metrics"; then
+    echo "  $family is missing from /metrics" >&2
+    exit 1
+  fi
+done
+echo "  ok: $(grep -c '^llm_gateway_' <<<"$metrics") gateway samples exposed"
