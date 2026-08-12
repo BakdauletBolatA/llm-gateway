@@ -45,7 +45,7 @@ budget:
 
 reliability:
   timeouts:
-    enabled: false
+    enabled: true
     connect_s: 2.0
     read_s: 8.0
     write_s: 5.0

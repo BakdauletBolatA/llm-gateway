@@ -1,0 +1,19 @@
+# Итерация 2 — таймауты.
+# Ограничиваем и отдельный вызов провайдера (connect/read/write), и весь запрос
+# целиком (total_s). Общий дедлайн важнее покажется на следующей итерации:
+# без него max_attempts × read_s легко превышает любой разумный SLA.
+reliability:
+  timeouts:
+    enabled: true
+    connect_s: 2.0
+    read_s: 8.0
+    write_s: 5.0
+    total_s: 12.0
+  retries:
+    enabled: false
+  circuit_breaker:
+    enabled: false
+  fallback:
+    enabled: false
+  cache:
+    enabled: false
