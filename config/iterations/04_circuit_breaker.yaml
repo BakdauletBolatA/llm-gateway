@@ -1,0 +1,24 @@
+# Итерация 4 — circuit breaker на провайдера.
+#
+# Скользящее окно 10 с; открываемся, если в окне не меньше min_calls вызовов и
+# доля отказов >= failure_ratio. Открытый брейкер отсекает попытки без похода в
+# сеть, через cooldown пускает half_open_max_calls пробников; успех — закрываемся,
+# отказ — снова открываемся с новым cooldown.
+#
+# min_calls нужен, чтобы не открываться от двух случайных ошибок на низком трафике.
+reliability:
+  timeouts:
+    enabled: true
+  retries:
+    enabled: true
+  circuit_breaker:
+    enabled: true
+    window_s: 10.0
+    min_calls: 8
+    failure_ratio: 0.5
+    cooldown_s: 4.0
+    half_open_max_calls: 2
+  fallback:
+    enabled: false
+  cache:
+    enabled: false

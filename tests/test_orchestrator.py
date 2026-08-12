@@ -276,3 +276,77 @@ async def test_a_healthy_provider_is_called_once_and_billed_once() -> None:
     assert result.attempts == 1 and result.retries == 0
     assert result.cost_usd > 0
     assert budget.spent == pytest.approx(result.cost_usd)
+
+
+# -- circuit breaker ----------------------------------------------------------
+
+
+def breaker_settings(**overrides: Any) -> Settings:
+    return settings_with(
+        timeouts={"enabled": True, "total_s": 30.0},
+        retries={"enabled": False},
+        circuit_breaker={
+            "enabled": True,
+            "window_s": 60.0,
+            "min_calls": 3,
+            "failure_ratio": 0.5,
+            "cooldown_s": 60.0,
+            "half_open_max_calls": 1,
+            **overrides,
+        },
+    )
+
+
+async def test_an_open_breaker_stops_calling_the_provider_at_all() -> None:
+    adapter = StubAdapter("mock_primary", script=[provider_error(ErrorKind.SERVER_ERROR)] * 20)
+    orchestrator, _ = build(breaker_settings(), {"mock_primary": adapter})
+
+    for _ in range(3):
+        with pytest.raises(ProviderError):
+            await orchestrator.execute(REQUEST, route_name="chaos-default")
+    calls_before = len(adapter.calls)
+
+    with pytest.raises(ProviderError) as excinfo:
+        await orchestrator.execute(REQUEST, route_name="chaos-default")
+    assert excinfo.value.kind is ErrorKind.CIRCUIT_OPEN
+    assert excinfo.value.breaker_skips == 1
+    assert len(adapter.calls) == calls_before, "an open breaker must not touch the network"
+
+
+async def test_a_breaker_open_on_one_provider_does_not_affect_another() -> None:
+    settings = breaker_settings()
+    broken = StubAdapter("mock_primary", script=[provider_error(ErrorKind.SERVER_ERROR)] * 10)
+    healthy = StubAdapter("mock_secondary")
+    orchestrator, _ = build(settings, {"mock_primary": broken, "mock_secondary": healthy})
+
+    for _ in range(3):
+        with pytest.raises(ProviderError):
+            await orchestrator.execute(REQUEST, route_name="chaos-default")
+
+    # A different route pointing at the healthy provider still works.
+    result = await orchestrator.execute(REQUEST, route_name="chaos-default-secondary")
+    assert result.provider == "mock_secondary"
+
+
+async def test_a_client_error_does_not_open_the_breaker() -> None:
+    """A 400 proves the provider is answering; it is our payload that is wrong."""
+    adapter = StubAdapter("mock_primary", script=[provider_error(ErrorKind.BAD_REQUEST)] * 10)
+    orchestrator, _ = build(breaker_settings(min_calls=2), {"mock_primary": adapter})
+
+    for _ in range(5):
+        with pytest.raises(ProviderError) as excinfo:
+            await orchestrator.execute(REQUEST, route_name="chaos-default")
+        assert excinfo.value.kind is ErrorKind.BAD_REQUEST
+    assert len(adapter.calls) == 5, "every request must still reach the provider"
+
+
+async def test_a_disabled_breaker_never_short_circuits() -> None:
+    adapter = StubAdapter("mock_primary", script=[provider_error(ErrorKind.SERVER_ERROR)] * 10)
+    settings = settings_with(circuit_breaker={"enabled": False}, retries={"enabled": False})
+    orchestrator, _ = build(settings, {"mock_primary": adapter})
+
+    for _ in range(6):
+        with pytest.raises(ProviderError) as excinfo:
+            await orchestrator.execute(REQUEST, route_name="chaos-default")
+        assert excinfo.value.kind is ErrorKind.SERVER_ERROR
+    assert len(adapter.calls) == 6

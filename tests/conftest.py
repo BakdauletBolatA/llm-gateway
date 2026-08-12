@@ -45,9 +45,23 @@ async def _database_available(dsn: str) -> bool:
 
 @pytest.fixture
 def gateway_settings() -> Settings:
-    """Base config with the mock as the only provider and every mechanism off."""
+    """Base config with the mock as the only provider and every mechanism off.
+
+    The reliability flags are pinned here on purpose: end-to-end tests assert the
+    wiring (routing, classification, logging, budget), and they must not change
+    meaning every time an iteration flips a flag in config/gateway.yaml.
+    Mechanism behaviour is covered by tests/test_orchestrator.py, which builds
+    its own settings per case.
+    """
     overrides = {
         "database": {"dsn": TEST_DSN, "run_migrations_on_startup": True},
+        "reliability": {
+            "timeouts": {"enabled": False},
+            "retries": {"enabled": False},
+            "circuit_breaker": {"enabled": False},
+            "fallback": {"enabled": False},
+            "cache": {"enabled": False},
+        },
         "providers": {
             "openai": {"enabled": False},
             "anthropic": {"enabled": False},
@@ -60,9 +74,9 @@ def gateway_settings() -> Settings:
     settings = load_settings("config/gateway.yaml")
     merged = settings.model_dump()
     for section, values in overrides.items():
-        if section == "providers":
+        if section in ("providers", "reliability"):
             for name, patch in values.items():  # type: ignore[union-attr]
-                merged["providers"][name].update(patch)
+                merged[section][name].update(patch)
         else:
             merged[section].update(values)  # type: ignore[union-attr]
     return Settings.model_validate(merged)

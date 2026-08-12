@@ -1,0 +1,274 @@
+{
+  "label": "04_circuit_breaker",
+  "scenario": "conn_reset",
+  "route": "chaos-default",
+  "note": "circuit breaker на провайдера, скользящее окно 10с",
+  "started_at": "2026-08-12T01:55:48.796696+00:00",
+  "duration_s": 0.49,
+  "concurrency": 15,
+  "client_timeout_s": 20.0,
+  "workload": {
+    "seed": 42,
+    "requests": 150,
+    "unique_prompts": 53,
+    "unique_topics": 22,
+    "duplicate_rate": 0.6467,
+    "paraphrase_rate": 0.8533
+  },
+  "results": {
+    "requests": 150,
+    "successes": 9,
+    "failures": 141,
+    "success_rate": 0.06,
+    "latency_ms": {
+      "p50": 15.7,
+      "p95": 169.1,
+      "p99": 239.1,
+      "mean": 42.4,
+      "max": 315.1,
+      "min": 5.6
+    },
+    "latency_ms_success_only": {
+      "p50": 127.8,
+      "p95": 194.0,
+      "p99": 194.0,
+      "mean": 132.6,
+      "max": 194.0,
+      "min": 90.5
+    },
+    "attempts_total": 17,
+    "retries_total": 0,
+    "fallbacks_total": 0,
+    "breaker_skips_total": 141,
+    "cache_hits": 0,
+    "cache_hit_rate": 0.0,
+    "cost_usd_client": 0.000647,
+    "outcomes": {
+      "http_503": 141,
+      "success": 9
+    },
+    "error_kinds": {
+      "circuit_open": 141
+    },
+    "providers_used": {
+      "mock_primary": 9
+    },
+    "throughput_rps": 305.0,
+    "cost_usd_server": 0.000647
+  },
+  "gateway_config": {
+    "reliability": {
+      "timeouts": {
+        "enabled": true,
+        "connect_s": 2.0,
+        "read_s": 8.0,
+        "write_s": 5.0,
+        "total_s": 12.0
+      },
+      "retries": {
+        "enabled": true,
+        "max_attempts": 3,
+        "base_delay_ms": 120,
+        "max_delay_ms": 2000,
+        "jitter": "full",
+        "respect_retry_after": true,
+        "max_retry_after_s": 3.0,
+        "retry_on": [
+          "timeout",
+          "connection",
+          "rate_limited",
+          "server_error",
+          "overloaded",
+          "invalid_response"
+        ]
+      },
+      "circuit_breaker": {
+        "enabled": true,
+        "window_s": 10.0,
+        "min_calls": 8,
+        "failure_ratio": 0.5,
+        "cooldown_s": 4.0,
+        "half_open_max_calls": 2
+      },
+      "fallback": {
+        "enabled": false,
+        "max_providers": 3
+      },
+      "cache": {
+        "enabled": false,
+        "similarity_threshold": 0.6,
+        "ttl_s": 900,
+        "max_temperature": 0.3,
+        "embedding_dim": 256,
+        "candidate_limit": 5,
+        "embedder": "hashing",
+        "ollama_embed_model": "nomic-embed-text"
+      }
+    },
+    "budget": {
+      "enabled": true,
+      "period": "day",
+      "limit_usd": 25.0,
+      "refresh_interval_s": 5.0,
+      "estimate_output_tokens": 512
+    },
+    "routes": {
+      "chaos-default": [
+        {
+          "provider": "mock_primary",
+          "model": "mock-gpt-4o-mini"
+        },
+        {
+          "provider": "mock_secondary",
+          "model": "mock-claude-haiku"
+        },
+        {
+          "provider": "mock_tertiary",
+          "model": "mock-llama-3.2"
+        }
+      ],
+      "production": [
+        {
+          "provider": "openai",
+          "model": "gpt-4o-mini"
+        },
+        {
+          "provider": "anthropic",
+          "model": "claude-haiku-4-5"
+        },
+        {
+          "provider": "ollama",
+          "model": "llama3.2"
+        }
+      ],
+      "local-only": [
+        {
+          "provider": "ollama",
+          "model": "llama3.2"
+        }
+      ]
+    },
+    "default_route": "chaos-default",
+    "providers": {
+      "mock_primary": {
+        "type": "openai",
+        "enabled": true
+      },
+      "mock_secondary": {
+        "type": "anthropic",
+        "enabled": true
+      },
+      "mock_tertiary": {
+        "type": "ollama",
+        "enabled": true
+      },
+      "openai": {
+        "type": "openai",
+        "enabled": false
+      },
+      "anthropic": {
+        "type": "anthropic",
+        "enabled": false
+      },
+      "ollama": {
+        "type": "ollama",
+        "enabled": false
+      }
+    },
+    "auth_enabled": false
+  },
+  "gateway_reliability_state": {
+    "circuit_breakers": [
+      {
+        "provider": "mock_primary",
+        "enabled": true,
+        "state": "open",
+        "window_calls": 9,
+        "failure_ratio": 0.4444,
+        "cooldown_remaining_s": 3.613,
+        "opened_count": 1,
+        "short_circuited": 141
+      },
+      {
+        "provider": "mock_secondary",
+        "enabled": true,
+        "state": "closed",
+        "window_calls": 0,
+        "failure_ratio": 0.0,
+        "cooldown_remaining_s": 0.0,
+        "opened_count": 0,
+        "short_circuited": 0
+      },
+      {
+        "provider": "mock_tertiary",
+        "enabled": true,
+        "state": "closed",
+        "window_calls": 0,
+        "failure_ratio": 0.0,
+        "cooldown_remaining_s": 0.0,
+        "opened_count": 0,
+        "short_circuited": 0
+      }
+    ],
+    "cache": {
+      "enabled": false,
+      "embedder": "hashing",
+      "lookups": 0,
+      "hits": 0,
+      "stores": 0,
+      "errors": 0,
+      "hit_rate": 0.0
+    },
+    "budget": {
+      "period": "day",
+      "period_start": "2026-08-12T00:00:00+00:00",
+      "limit_usd": 25.0,
+      "spent_usd": 0.177808,
+      "remaining_usd": 24.822192,
+      "per_key": {}
+    },
+    "recorder": {
+      "queued": 0,
+      "written": 750,
+      "dropped": 0,
+      "write_failures": 0
+    }
+  },
+  "mock_state": {
+    "scenario": "conn_reset",
+    "upstreams": [
+      {
+        "upstream": "primary",
+        "profile": "conn_reset",
+        "served": 17,
+        "deck_size": 100,
+        "cursor": 17,
+        "counts": {
+          "conn_abort": 8,
+          "ok": 9
+        }
+      },
+      {
+        "upstream": "secondary",
+        "profile": "healthy",
+        "served": 0,
+        "deck_size": 100,
+        "cursor": 0,
+        "counts": {}
+      },
+      {
+        "upstream": "tertiary",
+        "profile": "healthy",
+        "served": 0,
+        "deck_size": 100,
+        "cursor": 0,
+        "counts": {}
+      }
+    ]
+  },
+  "environment": {
+    "python": "3.12.3",
+    "platform": "Linux-6.18.5-fc-v20-x86_64-with-glibc2.39",
+    "cpu_count": 4
+  }
+}

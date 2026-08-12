@@ -68,7 +68,7 @@ reliability:
       - invalid_response
 
   circuit_breaker:
-    enabled: false
+    enabled: true
     window_s: 10.0
     min_calls: 8             # меньше — окно считается непоказательным
     failure_ratio: 0.5
@@ -136,6 +136,12 @@ routes:
           model: mock-claude-haiku
         - provider: mock_tertiary
           model: mock-llama-3.2
+    # Служебный маршрут: только второй апстрим мока. Нужен, чтобы проверить,
+    # что открытый брейкер одного провайдера не влияет на другого.
+    chaos-default-secondary:
+      chain:
+        - provider: mock_secondary
+          model: mock-claude-haiku
     # Маршрут «как в проде»: платные провайдеры с деградацией на локальную Ollama.
     production:
       chain:
