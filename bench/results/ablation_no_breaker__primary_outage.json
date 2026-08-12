@@ -3,8 +3,8 @@
   "scenario": "primary_outage",
   "route": "chaos-default",
   "note": "выключен circuit breaker",
-  "started_at": "2026-08-12T02:18:37.265429+00:00",
-  "duration_s": 2.26,
+  "started_at": "2026-08-12T12:47:18.940347+00:00",
+  "duration_s": 2.2,
   "concurrency": 15,
   "client_timeout_s": 20.0,
   "workload": {
@@ -21,38 +21,42 @@
     "failures": 0,
     "success_rate": 1.0,
     "latency_ms": {
-      "p50": 100.5,
-      "p95": 528.1,
-      "p99": 696.4,
-      "mean": 189.5,
-      "max": 746.2,
-      "min": 9.1
+      "p50": 73.3,
+      "p95": 510.8,
+      "p99": 571.1,
+      "mean": 185.9,
+      "max": 576.1,
+      "min": 14.7
     },
     "latency_ms_success_only": {
-      "p50": 100.5,
-      "p95": 528.1,
-      "p99": 696.4,
-      "mean": 189.5,
-      "max": 746.2,
-      "min": 9.1
+      "p50": 73.3,
+      "p95": 510.8,
+      "p99": 571.1,
+      "mean": 185.9,
+      "max": 576.1,
+      "min": 14.7
     },
-    "attempts_total": 206,
-    "retries_total": 98,
-    "fallbacks_total": 49,
+    "attempts_total": 211,
+    "retries_total": 100,
+    "fallbacks_total": 51,
     "breaker_skips_total": 0,
-    "cache_hits": 91,
-    "cache_hit_rate": 0.6067,
-    "cost_usd_client": 0.02506,
+    "hedges_total": 2,
+    "hedged_requests": 1,
+    "cache_hits": 90,
+    "cache_hit_rate": 0.6,
+    "cost_usd_client": 0.025057,
+    "cost_usd_wasted": 0.0,
     "outcomes": {
       "success": 150
     },
     "error_kinds": {},
     "providers_used": {
-      "mock_primary": 57,
-      "mock_secondary": 93
+      "mock_primary": 64,
+      "mock_secondary": 85,
+      "mock_tertiary": 1
     },
-    "throughput_rps": 66.27,
-    "cost_usd_server": 0.02506
+    "throughput_rps": 68.31,
+    "cost_usd_server": 0.025057
   },
   "gateway_config": {
     "reliability": {
@@ -91,6 +95,11 @@
       "fallback": {
         "enabled": true,
         "max_providers": 3
+      },
+      "hedging": {
+        "enabled": true,
+        "delay_ms": 400,
+        "max_in_flight": 2
       },
       "cache": {
         "enabled": true,
@@ -218,17 +227,17 @@
       "enabled": true,
       "embedder": "hashing",
       "lookups": 150,
-      "hits": 91,
-      "stores": 59,
+      "hits": 90,
+      "stores": 60,
       "errors": 0,
-      "hit_rate": 0.6067
+      "hit_rate": 0.6
     },
     "budget": {
       "period": "day",
       "period_start": "2026-08-12T00:00:00+00:00",
       "limit_usd": 25.0,
-      "spent_usd": 1.867494,
-      "remaining_usd": 23.132506,
+      "spent_usd": 1.333507,
+      "remaining_usd": 23.666493,
       "per_key": {}
     },
     "recorder": {
@@ -244,31 +253,33 @@
       {
         "upstream": "primary",
         "profile": "degraded_then_dead",
-        "served": 157,
+        "served": 160,
         "deck_size": 100,
-        "cursor": 147,
+        "cursor": 150,
         "counts": {
-          "http_500": 147,
+          "http_500": 150,
           "ok": 10
         }
       },
       {
         "upstream": "secondary",
         "profile": "healthy",
-        "served": 49,
+        "served": 50,
         "deck_size": 100,
-        "cursor": 49,
+        "cursor": 50,
         "counts": {
-          "ok": 49
+          "ok": 50
         }
       },
       {
         "upstream": "tertiary",
         "profile": "healthy",
-        "served": 0,
+        "served": 1,
         "deck_size": 100,
-        "cursor": 0,
-        "counts": {}
+        "cursor": 1,
+        "counts": {
+          "ok": 1
+        }
       }
     ]
   },

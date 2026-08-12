@@ -69,8 +69,10 @@ def observe(response: httpx.Response, latency_ms: float) -> Observation:
         retries=_int_header(response, "x-gateway-retries"),
         fallbacks=_int_header(response, "x-gateway-fallbacks"),
         breaker_skips=_int_header(response, "x-gateway-breaker-skips"),
+        hedges=_int_header(response, "x-gateway-hedges"),
         cache_hit=response.headers.get("x-gateway-cache") == "hit",
         cost_usd=_float_header(response, "x-gateway-cost-usd"),
+        wasted_cost_usd=_float_header(response, "x-gateway-cost-wasted-usd"),
         provider=response.headers.get("x-gateway-provider"),
     )
 
@@ -240,6 +242,7 @@ def _print_line(result: dict[str, Any]) -> None:
         f"p95={summary['latency_ms']['p95']:>8.0f}ms  "
         f"retries={summary['retries_total']:>4}  "
         f"fallbacks={summary['fallbacks_total']:>4}  "
+        f"hedges={summary['hedges_total']:>4}  "
         f"cache={summary['cache_hits']:>4}  "
         f"${summary['cost_usd_server']:.4f}  "
         f"({result['duration_s']}s)"

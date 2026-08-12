@@ -3,8 +3,8 @@
   "scenario": "storm",
   "route": "chaos-default",
   "note": "circuit breaker открывается только при 90% отказов",
-  "started_at": "2026-08-12T02:19:53.064478+00:00",
-  "duration_s": 16.95,
+  "started_at": "2026-08-12T12:49:58.536425+00:00",
+  "duration_s": 2.32,
   "concurrency": 15,
   "client_timeout_s": 20.0,
   "workload": {
@@ -17,45 +17,45 @@
   },
   "results": {
     "requests": 150,
-    "successes": 149,
-    "failures": 1,
-    "success_rate": 0.9933,
+    "successes": 150,
+    "failures": 0,
+    "success_rate": 1.0,
     "latency_ms": {
-      "p50": 23.8,
-      "p95": 2512.2,
-      "p99": 9462.7,
-      "mean": 736.0,
-      "max": 16260.7,
-      "min": 6.4
+      "p50": 63.0,
+      "p95": 591.5,
+      "p99": 634.7,
+      "mean": 188.8,
+      "max": 636.1,
+      "min": 7.3
     },
     "latency_ms_success_only": {
-      "p50": 23.8,
-      "p95": 2511.6,
-      "p99": 8930.7,
-      "mean": 631.8,
-      "max": 9462.7,
-      "min": 6.4
+      "p50": 63.0,
+      "p95": 591.5,
+      "p99": 634.7,
+      "mean": 188.8,
+      "max": 636.1,
+      "min": 7.3
     },
-    "attempts_total": 157,
-    "retries_total": 74,
-    "fallbacks_total": 20,
+    "attempts_total": 146,
+    "retries_total": 46,
+    "fallbacks_total": 29,
     "breaker_skips_total": 0,
-    "cache_hits": 86,
-    "cache_hit_rate": 0.5733,
-    "cost_usd_client": 0.012794,
+    "hedges_total": 37,
+    "hedged_requests": 30,
+    "cache_hits": 88,
+    "cache_hit_rate": 0.5867,
+    "cost_usd_client": 0.016834,
+    "cost_usd_wasted": 0.0,
     "outcomes": {
-      "http_504": 1,
-      "success": 149
+      "success": 150
     },
-    "error_kinds": {
-      "deadline_exceeded": 1
-    },
+    "error_kinds": {},
     "providers_used": {
-      "mock_primary": 107,
-      "mock_secondary": 42
+      "mock_primary": 98,
+      "mock_secondary": 52
     },
-    "throughput_rps": 8.85,
-    "cost_usd_server": 0.012794
+    "throughput_rps": 64.54,
+    "cost_usd_server": 0.016834
   },
   "gateway_config": {
     "reliability": {
@@ -94,6 +94,11 @@
       "fallback": {
         "enabled": true,
         "max_providers": 3
+      },
+      "hedging": {
+        "enabled": true,
+        "delay_ms": 400,
+        "max_in_flight": 2
       },
       "cache": {
         "enabled": true,
@@ -190,8 +195,8 @@
         "provider": "mock_primary",
         "enabled": true,
         "state": "closed",
-        "window_calls": 14,
-        "failure_ratio": 0.7857,
+        "window_calls": 100,
+        "failure_ratio": 0.67,
         "cooldown_remaining_s": 0.0,
         "opened_count": 0,
         "short_circuited": 0
@@ -200,7 +205,7 @@
         "provider": "mock_secondary",
         "enabled": true,
         "state": "closed",
-        "window_calls": 15,
+        "window_calls": 29,
         "failure_ratio": 0.0,
         "cooldown_remaining_s": 0.0,
         "opened_count": 0,
@@ -221,17 +226,17 @@
       "enabled": true,
       "embedder": "hashing",
       "lookups": 150,
-      "hits": 86,
-      "stores": 63,
+      "hits": 88,
+      "stores": 62,
       "errors": 0,
-      "hit_rate": 0.5733
+      "hit_rate": 0.5867
     },
     "budget": {
       "period": "day",
       "period_start": "2026-08-12T00:00:00+00:00",
       "limit_usd": 25.0,
-      "spent_usd": 2.042869,
-      "remaining_usd": 22.957131,
+      "spent_usd": 1.69848,
+      "remaining_usd": 23.30152,
       "per_key": {}
     },
     "recorder": {
@@ -247,37 +252,39 @@
       {
         "upstream": "primary",
         "profile": "storm",
-        "served": 138,
+        "served": 108,
         "deck_size": 100,
-        "cursor": 138,
+        "cursor": 108,
         "counts": {
-          "bad_json": 13,
-          "bad_schema": 6,
-          "conn_abort": 19,
-          "hang": 8,
-          "http_429": 21,
-          "http_500": 17,
-          "http_503": 10,
-          "ok": 44
+          "bad_json": 11,
+          "bad_schema": 5,
+          "conn_abort": 15,
+          "hang": 5,
+          "http_429": 17,
+          "http_500": 15,
+          "http_503": 7,
+          "ok": 33
         }
       },
       {
         "upstream": "secondary",
         "profile": "healthy",
-        "served": 19,
+        "served": 31,
         "deck_size": 100,
-        "cursor": 19,
+        "cursor": 31,
         "counts": {
-          "ok": 19
+          "ok": 31
         }
       },
       {
         "upstream": "tertiary",
         "profile": "healthy",
-        "served": 0,
+        "served": 7,
         "deck_size": 100,
-        "cursor": 0,
-        "counts": {}
+        "cursor": 7,
+        "counts": {
+          "ok": 7
+        }
       }
     ]
   },

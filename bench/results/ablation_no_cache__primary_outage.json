@@ -3,8 +3,8 @@
   "scenario": "primary_outage",
   "route": "chaos-default",
   "note": "выключен семантический кэш",
-  "started_at": "2026-08-12T02:19:47.833946+00:00",
-  "duration_s": 1.15,
+  "started_at": "2026-08-12T12:49:32.180393+00:00",
+  "duration_s": 1.3,
   "concurrency": 15,
   "client_timeout_s": 20.0,
   "workload": {
@@ -21,28 +21,31 @@
     "failures": 0,
     "success_rate": 1.0,
     "latency_ms": {
-      "p50": 96.0,
-      "p95": 210.2,
-      "p99": 291.1,
-      "mean": 104.7,
-      "max": 347.2,
-      "min": 52.3
+      "p50": 106.2,
+      "p95": 259.9,
+      "p99": 291.4,
+      "mean": 116.0,
+      "max": 308.2,
+      "min": 58.7
     },
     "latency_ms_success_only": {
-      "p50": 96.0,
-      "p95": 210.2,
-      "p99": 291.1,
-      "mean": 104.7,
-      "max": 347.2,
-      "min": 52.3
+      "p50": 106.2,
+      "p95": 259.9,
+      "p99": 291.4,
+      "mean": 116.0,
+      "max": 308.2,
+      "min": 58.7
     },
-    "attempts_total": 167,
-    "retries_total": 2,
+    "attempts_total": 165,
+    "retries_total": 0,
     "fallbacks_total": 140,
     "breaker_skips_total": 140,
+    "hedges_total": 0,
+    "hedged_requests": 0,
     "cache_hits": 0,
     "cache_hit_rate": 0.0,
-    "cost_usd_client": 0.07302,
+    "cost_usd_client": 0.073019,
+    "cost_usd_wasted": 0.0,
     "outcomes": {
       "success": 150
     },
@@ -51,8 +54,8 @@
       "mock_primary": 10,
       "mock_secondary": 140
     },
-    "throughput_rps": 129.87,
-    "cost_usd_server": 0.07302
+    "throughput_rps": 115.47,
+    "cost_usd_server": 0.073019
   },
   "gateway_config": {
     "reliability": {
@@ -91,6 +94,11 @@
       "fallback": {
         "enabled": true,
         "max_providers": 3
+      },
+      "hedging": {
+        "enabled": true,
+        "delay_ms": 400,
+        "max_in_flight": 2
       },
       "cache": {
         "enabled": false,
@@ -187,9 +195,9 @@
         "provider": "mock_primary",
         "enabled": true,
         "state": "open",
-        "window_calls": 7,
+        "window_calls": 5,
         "failure_ratio": 1.0,
-        "cooldown_remaining_s": 2.927,
+        "cooldown_remaining_s": 2.804,
         "opened_count": 1,
         "short_circuited": 140
       },
@@ -227,8 +235,8 @@
       "period": "day",
       "period_start": "2026-08-12T00:00:00+00:00",
       "limit_usd": 25.0,
-      "spent_usd": 2.030075,
-      "remaining_usd": 22.969925,
+      "spent_usd": 1.603854,
+      "remaining_usd": 23.396146,
       "per_key": {}
     },
     "recorder": {
@@ -244,11 +252,11 @@
       {
         "upstream": "primary",
         "profile": "degraded_then_dead",
-        "served": 27,
+        "served": 25,
         "deck_size": 100,
-        "cursor": 17,
+        "cursor": 15,
         "counts": {
-          "http_500": 17,
+          "http_500": 15,
           "ok": 10
         }
       },

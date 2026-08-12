@@ -68,6 +68,24 @@ class FallbackConfig(BaseModel):
     max_providers: int = Field(default=3, ge=1)
 
 
+class HedgingConfig(BaseModel):
+    """Tail-latency hedging: race the next provider instead of waiting it out.
+
+    Retries help when a provider *fails*; they do nothing when it answers, slowly.
+    A hedge starts the next provider in the chain after `delay_ms` and takes
+    whichever answer arrives first. The delay is the whole design: set above the
+    normal p95, only the slow tail gets duplicated.
+    """
+
+    enabled: bool = False
+    delay_ms: int = Field(default=400, ge=1)
+    max_in_flight: int = Field(default=2, ge=2)
+
+    @property
+    def delay_s(self) -> float:
+        return self.delay_ms / 1000.0
+
+
 class CacheConfig(BaseModel):
     enabled: bool = False
     similarity_threshold: float = Field(default=0.93, gt=0.0, le=1.0)
@@ -84,7 +102,24 @@ class ReliabilityConfig(BaseModel):
     retries: RetryConfig = Field(default_factory=RetryConfig)
     circuit_breaker: CircuitBreakerConfig = Field(default_factory=CircuitBreakerConfig)
     fallback: FallbackConfig = Field(default_factory=FallbackConfig)
+    hedging: HedgingConfig = Field(default_factory=HedgingConfig)
     cache: CacheConfig = Field(default_factory=CacheConfig)
+
+    @model_validator(mode="after")
+    def _hedging_needs_something_to_hedge_with(self) -> ReliabilityConfig:
+        if self.hedging.enabled and not self.fallback.enabled:
+            raise ValueError(
+                "reliability.hedging requires reliability.fallback: without a chain "
+                "there is no second provider to race against the first"
+            )
+        deadline_ms = self.timeouts.total_s * 1000
+        if self.hedging.enabled and self.timeouts.enabled and self.hedging.delay_ms >= deadline_ms:
+            raise ValueError(
+                f"reliability.hedging.delay_ms={self.hedging.delay_ms} is not below "
+                f"reliability.timeouts.total_s={self.timeouts.total_s}s: the hedge "
+                "would never be launched before the request deadline"
+            )
+        return self
 
     def summary(self) -> dict[str, Any]:
         """Compact, secret-free view used by /v1/config and stored in bench results."""
@@ -93,6 +128,7 @@ class ReliabilityConfig(BaseModel):
             "retries": self.retries.model_dump(mode="json"),
             "circuit_breaker": self.circuit_breaker.model_dump(),
             "fallback": self.fallback.model_dump(),
+            "hedging": self.hedging.model_dump(),
             "cache": self.cache.model_dump(),
         }
 

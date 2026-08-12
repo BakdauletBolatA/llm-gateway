@@ -52,6 +52,7 @@ class CallRecord:
     retries: int = 0
     fallbacks: int = 0
     breaker_skips: int = 0
+    hedges: int = 0
     cache_hit: bool = False
     tokens_in: int = 0
     tokens_out: int = 0
@@ -153,6 +154,7 @@ class CallRecorder:
                             retries=record.retries,
                             fallbacks=record.fallbacks,
                             breaker_skips=record.breaker_skips,
+                            hedges=record.hedges,
                             cache_hit=record.cache_hit,
                             tokens_in=record.tokens_in,
                             tokens_out=record.tokens_out,

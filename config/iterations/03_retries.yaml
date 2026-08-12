@@ -23,5 +23,7 @@ reliability:
     enabled: false
   fallback:
     enabled: false
+  hedging:
+    enabled: false
   cache:
     enabled: false

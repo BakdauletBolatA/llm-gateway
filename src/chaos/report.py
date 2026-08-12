@@ -85,17 +85,71 @@ def _totals_row(label: str, runs: list[dict[str, Any]]) -> list[str]:
     ]
 
 
+#: Mechanisms in the order the iterations introduced them; the letter is used by the
+#: compact "вкл" column.
+MECHANISMS = [
+    ("timeouts", "T", "таймауты"),
+    ("retries", "R", "ретраи"),
+    ("circuit_breaker", "B", "circuit breaker"),
+    ("fallback", "F", "fallback"),
+    ("hedging", "H", "хедж"),
+    ("cache", "C", "семкэш"),
+]
+
+
+def _enabled(run: dict[str, Any], key: str) -> bool:
+    """A run made before a mechanism existed simply carries no flag for it."""
+    section = run["gateway_config"]["reliability"].get(key) or {}
+    return bool(section.get("enabled"))
+
+
 def _flags(run: dict[str, Any]) -> str:
-    reliability = run["gateway_config"]["reliability"]
-    short = {
-        "timeouts": "T",
-        "retries": "R",
-        "circuit_breaker": "B",
-        "fallback": "F",
-        "cache": "C",
-    }
-    enabled = [flag for key, flag in short.items() if reliability[key]["enabled"]]
+    enabled = [letter for key, letter, _ in MECHANISMS if _enabled(run, key)]
     return "".join(enabled) or "—"
+
+
+def _hedging_table(results: list[dict[str, Any]]) -> str | None:
+    """What hedging cost: duplicates launched, answers paid for and dropped, p95 against
+    the same build with hedging off."""
+    hedged = [
+        run
+        for run in results
+        if _enabled(run, "hedging") and not run["label"].startswith((ABLATION_PREFIX, EXTRA_PREFIX))
+    ]
+    if not hedged:
+        return None
+    baseline = {
+        run["scenario"]: run for run in results if run["label"] == f"{ABLATION_PREFIX}_no_hedging"
+    }
+    rows = []
+    for run in sorted(hedged, key=lambda r: (_sort_key(r["label"]), r["scenario"])):
+        summary = run["results"]
+        without = baseline.get(run["scenario"])
+        rows.append(
+            [
+                f"`{run['scenario']}`",
+                f"{summary.get('hedged_requests', 0)}/{summary['requests']}",
+                str(summary.get("hedges_total", 0)),
+                f"{summary['latency_ms']['p95']:.0f}",
+                f"{without['results']['latency_ms']['p95']:.0f}" if without else "—",
+                f"{summary['cost_usd_server']:.4f}",
+                f"{without['results']['cost_usd_server']:.4f}" if without else "—",
+                f"{summary.get('cost_usd_wasted', 0.0):.4f}",
+            ]
+        )
+    return _table(
+        [
+            "сценарий",
+            "запросов с хеджем",
+            "хеджей",
+            "p95 с хеджем",
+            "p95 без",
+            "$ с хеджем",
+            "$ без",
+            "из них впустую $",
+        ],
+        rows,
+    )
 
 
 def build_section(results: list[dict[str, Any]]) -> str:
@@ -118,23 +172,13 @@ def build_section(results: list[dict[str, Any]]) -> str:
     flag_rows = []
     for label in labels:
         run = by_label[label][0]
-        reliability = run["gateway_config"]["reliability"]
         flag_rows.append(
             [
                 f"**{label}**",
-                "да" if reliability["timeouts"]["enabled"] else "—",
-                "да" if reliability["retries"]["enabled"] else "—",
-                "да" if reliability["circuit_breaker"]["enabled"] else "—",
-                "да" if reliability["fallback"]["enabled"] else "—",
-                "да" if reliability["cache"]["enabled"] else "—",
+                *("да" if _enabled(run, key) else "—" for key, _, _ in MECHANISMS),
             ]
         )
-    parts.append(
-        _table(
-            ["итерация", "таймауты", "ретраи", "circuit breaker", "fallback", "семкэш"],
-            flag_rows,
-        )
-    )
+    parts.append(_table(["итерация", *(title for _, _, title in MECHANISMS)], flag_rows))
 
     parts.append("\n### Сводка по итерациям\n")
     parts.append(
@@ -175,6 +219,15 @@ def build_section(results: list[dict[str, Any]]) -> str:
     parts.append(
         _matrix(iterations, labels, scenarios, lambda r: f"{r['results']['cost_usd_server']:.4f}")
     )
+
+    hedging_table = _hedging_table(results)
+    if hedging_table is not None:
+        parts.append("\n### Хеджирование: сколько дублей и во что они обошлись\n")
+        parts.append(
+            "Столбцы «без» взяты из ablation-прогона `ablation_no_hedging` — "
+            "та же сборка с выключенным хеджем.\n"
+        )
+        parts.append(hedging_table)
 
     if ablations:
         parts.append("\n### Ablation: выключаем по одному механизму\n")
@@ -238,6 +291,7 @@ def build_section(results: list[dict[str, Any]]) -> str:
                     f"{summary['latency_ms']['p50']:.0f}",
                     f"{summary['latency_ms']['p95']:.0f}",
                     f"{summary['latency_ms']['max']:.0f}",
+                    str(summary.get("hedges_total", 0)),
                     str(summary["cache_hits"]),
                     f"{summary['cost_usd_server']:.4f}",
                     run.get("note") or "",
@@ -253,6 +307,7 @@ def build_section(results: list[dict[str, Any]]) -> str:
                     "p50",
                     "p95",
                     "max",
+                    "хеджей",
                     "кэш",
                     "$",
                     "зачем",

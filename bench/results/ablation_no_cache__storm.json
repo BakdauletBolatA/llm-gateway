@@ -3,8 +3,8 @@
   "scenario": "storm",
   "route": "chaos-default",
   "note": "выключен семантический кэш",
-  "started_at": "2026-08-12T02:19:14.796813+00:00",
-  "duration_s": 1.47,
+  "started_at": "2026-08-12T12:49:22.237172+00:00",
+  "duration_s": 1.32,
   "concurrency": 15,
   "client_timeout_s": 20.0,
   "workload": {
@@ -21,28 +21,31 @@
     "failures": 0,
     "success_rate": 1.0,
     "latency_ms": {
-      "p50": 92.2,
-      "p95": 231.3,
-      "p99": 1339.0,
-      "mean": 124.0,
-      "max": 1411.8,
-      "min": 48.8
+      "p50": 100.3,
+      "p95": 226.8,
+      "p99": 538.1,
+      "mean": 118.1,
+      "max": 551.1,
+      "min": 51.0
     },
     "latency_ms_success_only": {
-      "p50": 92.2,
-      "p95": 231.3,
-      "p99": 1339.0,
-      "mean": 124.0,
-      "max": 1411.8,
-      "min": 48.8
+      "p50": 100.3,
+      "p95": 226.8,
+      "p99": 538.1,
+      "mean": 118.1,
+      "max": 551.1,
+      "min": 51.0
     },
     "attempts_total": 161,
     "retries_total": 1,
     "fallbacks_total": 144,
-    "breaker_skips_total": 144,
+    "breaker_skips_total": 141,
+    "hedges_total": 3,
+    "hedged_requests": 3,
     "cache_hits": 0,
     "cache_hit_rate": 0.0,
-    "cost_usd_client": 0.074907,
+    "cost_usd_client": 0.074909,
+    "cost_usd_wasted": 0.0,
     "outcomes": {
       "success": 150
     },
@@ -51,8 +54,8 @@
       "mock_primary": 6,
       "mock_secondary": 144
     },
-    "throughput_rps": 102.02,
-    "cost_usd_server": 0.074907
+    "throughput_rps": 113.32,
+    "cost_usd_server": 0.074909
   },
   "gateway_config": {
     "reliability": {
@@ -91,6 +94,11 @@
       "fallback": {
         "enabled": true,
         "max_providers": 3
+      },
+      "hedging": {
+        "enabled": true,
+        "delay_ms": 400,
+        "max_in_flight": 2
       },
       "cache": {
         "enabled": false,
@@ -189,9 +197,9 @@
         "state": "open",
         "window_calls": 9,
         "failure_ratio": 0.5556,
-        "cooldown_remaining_s": 2.63,
+        "cooldown_remaining_s": 2.782,
         "opened_count": 1,
-        "short_circuited": 144
+        "short_circuited": 141
       },
       {
         "provider": "mock_secondary",
@@ -227,8 +235,8 @@
       "period": "day",
       "period_start": "2026-08-12T00:00:00+00:00",
       "limit_usd": 25.0,
-      "spent_usd": 1.946671,
-      "remaining_usd": 23.053329,
+      "spent_usd": 1.507989,
+      "remaining_usd": 23.492011,
       "per_key": {}
     },
     "recorder": {

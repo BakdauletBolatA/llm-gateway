@@ -3,8 +3,8 @@
   "scenario": "primary_outage",
   "route": "chaos-default",
   "note": "circuit breaker открывается только при 90% отказов",
-  "started_at": "2026-08-12T02:20:33.730185+00:00",
-  "duration_s": 2.23,
+  "started_at": "2026-08-12T12:50:09.362337+00:00",
+  "duration_s": 1.85,
   "concurrency": 15,
   "client_timeout_s": 20.0,
   "workload": {
@@ -21,38 +21,41 @@
     "failures": 0,
     "success_rate": 1.0,
     "latency_ms": {
-      "p50": 178.3,
-      "p95": 494.0,
-      "p99": 671.2,
-      "mean": 205.1,
-      "max": 685.1,
-      "min": 9.7
+      "p50": 103.6,
+      "p95": 491.2,
+      "p99": 563.8,
+      "mean": 168.6,
+      "max": 597.1,
+      "min": 10.1
     },
     "latency_ms_success_only": {
-      "p50": 178.3,
-      "p95": 494.0,
-      "p99": 671.2,
-      "mean": 205.1,
-      "max": 685.1,
-      "min": 9.7
+      "p50": 103.6,
+      "p95": 491.2,
+      "p99": 563.8,
+      "mean": 168.6,
+      "max": 597.1,
+      "min": 10.1
     },
-    "attempts_total": 148,
-    "retries_total": 57,
-    "fallbacks_total": 46,
-    "breaker_skips_total": 21,
-    "cache_hits": 94,
-    "cache_hit_rate": 0.6267,
-    "cost_usd_client": 0.023335,
+    "attempts_total": 152,
+    "retries_total": 58,
+    "fallbacks_total": 48,
+    "breaker_skips_total": 23,
+    "hedges_total": 6,
+    "hedged_requests": 3,
+    "cache_hits": 92,
+    "cache_hit_rate": 0.6133,
+    "cost_usd_client": 0.024381,
+    "cost_usd_wasted": 0.0,
     "outcomes": {
       "success": 150
     },
     "error_kinds": {},
     "providers_used": {
-      "mock_primary": 59,
-      "mock_secondary": 91
+      "mock_primary": 68,
+      "mock_secondary": 82
     },
-    "throughput_rps": 67.36,
-    "cost_usd_server": 0.023335
+    "throughput_rps": 80.98,
+    "cost_usd_server": 0.024381
   },
   "gateway_config": {
     "reliability": {
@@ -91,6 +94,11 @@
       "fallback": {
         "enabled": true,
         "max_providers": 3
+      },
+      "hedging": {
+        "enabled": true,
+        "delay_ms": 400,
+        "max_in_flight": 2
       },
       "cache": {
         "enabled": true,
@@ -187,17 +195,17 @@
         "provider": "mock_primary",
         "enabled": true,
         "state": "open",
-        "window_calls": 2,
+        "window_calls": 1,
         "failure_ratio": 1.0,
-        "cooldown_remaining_s": 2.749,
+        "cooldown_remaining_s": 3.063,
         "opened_count": 1,
-        "short_circuited": 21
+        "short_circuited": 23
       },
       {
         "provider": "mock_secondary",
         "enabled": true,
         "state": "closed",
-        "window_calls": 46,
+        "window_calls": 48,
         "failure_ratio": 0.0,
         "cooldown_remaining_s": 0.0,
         "opened_count": 0,
@@ -218,17 +226,17 @@
       "enabled": true,
       "embedder": "hashing",
       "lookups": 150,
-      "hits": 94,
-      "stores": 56,
+      "hits": 92,
+      "stores": 58,
       "errors": 0,
-      "hit_rate": 0.6267
+      "hit_rate": 0.6133
     },
     "budget": {
       "period": "day",
       "period_start": "2026-08-12T00:00:00+00:00",
       "limit_usd": 25.0,
-      "spent_usd": 2.070015,
-      "remaining_usd": 22.929985,
+      "spent_usd": 1.732504,
+      "remaining_usd": 23.267496,
       "per_key": {}
     },
     "recorder": {
@@ -244,31 +252,33 @@
       {
         "upstream": "primary",
         "profile": "degraded_then_dead",
-        "served": 102,
+        "served": 101,
         "deck_size": 100,
-        "cursor": 92,
+        "cursor": 91,
         "counts": {
-          "http_500": 92,
+          "http_500": 91,
           "ok": 10
         }
       },
       {
         "upstream": "secondary",
         "profile": "healthy",
-        "served": 46,
+        "served": 48,
         "deck_size": 100,
-        "cursor": 46,
+        "cursor": 48,
         "counts": {
-          "ok": 46
+          "ok": 48
         }
       },
       {
         "upstream": "tertiary",
         "profile": "healthy",
-        "served": 0,
+        "served": 3,
         "deck_size": 100,
-        "cursor": 0,
-        "counts": {}
+        "cursor": 3,
+        "counts": {
+          "ok": 3
+        }
       }
     ]
   },

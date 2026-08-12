@@ -54,8 +54,32 @@ def test_fallback_disabled_truncates_the_chain_to_one_provider(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("GW__RELIABILITY__FALLBACK__ENABLED", "false")
+    # Hedging is meaningless without a chain, and the config refuses the combination.
+    monkeypatch.setenv("GW__RELIABILITY__HEDGING__ENABLED", "false")
     settings = load_settings(CONFIG)
     assert len(settings.resolve_chain("chaos-default")) == 1
+
+
+def test_hedging_without_a_fallback_chain_is_a_config_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Fail at startup, not silently at runtime.
+
+    With a single-provider chain there is no second provider to race, so a config
+    that asks for hedging without fallback promises something it cannot deliver.
+    """
+    monkeypatch.setenv("GW__RELIABILITY__HEDGING__ENABLED", "true")
+    monkeypatch.setenv("GW__RELIABILITY__FALLBACK__ENABLED", "false")
+    with pytest.raises(ValueError, match=r"hedging requires reliability\.fallback"):
+        load_settings(CONFIG)
+
+
+def test_a_hedge_delay_past_the_deadline_is_a_config_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GW__RELIABILITY__HEDGING__DELAY_MS", "60000")
+    with pytest.raises(ValueError, match="is not below"):
+        load_settings(CONFIG)
 
 
 def test_fallback_enabled_uses_the_whole_chain(monkeypatch: pytest.MonkeyPatch) -> None:

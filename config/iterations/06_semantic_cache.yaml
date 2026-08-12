@@ -19,6 +19,8 @@ reliability:
     enabled: true
   fallback:
     enabled: true
+  hedging:
+    enabled: false
   cache:
     enabled: true
     similarity_threshold: 0.60

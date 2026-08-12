@@ -115,6 +115,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             "retries": settings.reliability.retries.enabled,
             "circuit_breaker": settings.reliability.circuit_breaker.enabled,
             "fallback": settings.reliability.fallback.enabled,
+            "hedging": settings.reliability.hedging.enabled,
             "cache": settings.reliability.cache.enabled,
         },
     )
@@ -181,6 +182,7 @@ def _gateway_headers(
                 "X-Gateway-Retries": str(result.retries),
                 "X-Gateway-Fallbacks": str(result.fallbacks),
                 "X-Gateway-Breaker-Skips": str(result.breaker_skips),
+                "X-Gateway-Hedges": str(result.hedges),
                 "X-Gateway-Cache": "hit" if result.cache_hit else "miss",
                 "X-Gateway-Cost-Usd": f"{result.cost_usd:.6f}",
                 "X-Gateway-Tokens": f"{result.tokens_in}/{result.tokens_out}",
@@ -188,6 +190,9 @@ def _gateway_headers(
         )
         if result.cache_similarity is not None:
             headers["X-Gateway-Cache-Similarity"] = f"{result.cache_similarity:.4f}"
+        if result.wasted_cost_usd:
+            # Paid for, not served: an answer that lost a hedge race.
+            headers["X-Gateway-Cost-Wasted-Usd"] = f"{result.wasted_cost_usd:.6f}"
     if error is not None:
         headers.update(
             {
@@ -196,6 +201,7 @@ def _gateway_headers(
                 "X-Gateway-Retries": str(error.retries),
                 "X-Gateway-Fallbacks": str(error.fallbacks),
                 "X-Gateway-Breaker-Skips": str(error.breaker_skips),
+                "X-Gateway-Hedges": str(error.hedges),
                 "X-Gateway-Cache": "miss",
                 "X-Gateway-Cost-Usd": "0.000000",
             }
@@ -258,6 +264,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     retries=error.retries,
                     fallbacks=error.fallbacks,
                     breaker_skips=error.breaker_skips,
+                    hedges=error.hedges,
                     latency_ms=latency_ms,
                     provider_latency_ms=error.provider_latency_ms,
                     prompt_chars=len(payload.prompt_text()),
@@ -304,6 +311,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 retries=result.retries,
                 fallbacks=result.fallbacks,
                 breaker_skips=result.breaker_skips,
+                hedges=result.hedges,
                 cache_hit=result.cache_hit,
                 tokens_in=result.tokens_in,
                 tokens_out=result.tokens_out,
@@ -329,6 +337,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "retries": result.retries,
                 "fallbacks": result.fallbacks,
                 "breaker_skips": result.breaker_skips,
+                "hedges": result.hedges,
                 "cache_hit": result.cache_hit,
                 "cache_similarity": result.cache_similarity,
                 "cost_usd": result.cost_usd,

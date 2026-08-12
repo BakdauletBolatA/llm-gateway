@@ -20,6 +20,7 @@ from sqlalchemy import (
     String,
     Text,
     func,
+    text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -51,6 +52,7 @@ class LlmCall(Base):
     retries: Mapped[int] = mapped_column(Integer, default=0)
     fallbacks: Mapped[int] = mapped_column(Integer, default=0)
     breaker_skips: Mapped[int] = mapped_column(Integer, default=0)
+    hedges: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
     cache_hit: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
 
     tokens_in: Mapped[int] = mapped_column(Integer, default=0)

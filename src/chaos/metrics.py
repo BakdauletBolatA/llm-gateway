@@ -21,8 +21,10 @@ class Observation:
     retries: int = 0
     fallbacks: int = 0
     breaker_skips: int = 0
+    hedges: int = 0
     cache_hit: bool = False
     cost_usd: float = 0.0
+    wasted_cost_usd: float = 0.0
     provider: str | None = None
 
 
@@ -77,11 +79,14 @@ class RunAggregate:
             "retries_total": sum(o.retries for o in self.observations),
             "fallbacks_total": sum(o.fallbacks for o in self.observations),
             "breaker_skips_total": sum(o.breaker_skips for o in self.observations),
+            "hedges_total": sum(o.hedges for o in self.observations),
+            "hedged_requests": sum(1 for o in self.observations if o.hedges),
             "cache_hits": sum(1 for o in self.observations if o.cache_hit),
             "cache_hit_rate": (
                 round(sum(1 for o in self.observations if o.cache_hit) / total, 4) if total else 0.0
             ),
             "cost_usd_client": round(sum(o.cost_usd for o in self.observations), 6),
+            "cost_usd_wasted": round(sum(o.wasted_cost_usd for o in self.observations), 6),
             "outcomes": dict(sorted(Counter(o.outcome for o in self.observations).items())),
             "error_kinds": dict(
                 sorted(Counter(o.error_kind for o in failures if o.error_kind).items())

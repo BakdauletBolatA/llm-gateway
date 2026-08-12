@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import random
+import time
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -107,7 +108,7 @@ def settings_with(**reliability: dict[str, Any]) -> Settings:
     chain later.
     """
     tree = load_settings("config/gateway.yaml").model_dump()
-    for section in ("timeouts", "retries", "circuit_breaker", "fallback", "cache"):
+    for section in ("timeouts", "retries", "circuit_breaker", "fallback", "hedging", "cache"):
         tree["reliability"][section]["enabled"] = False
     for section, patch in reliability.items():
         tree["reliability"][section].update(patch)
@@ -456,3 +457,158 @@ async def test_a_hop_skipped_by_an_open_breaker_still_counts_as_a_fallback() -> 
     assert result.breaker_skips == 1
     assert result.fallbacks == 1, "traffic moved to another provider: that is a fallback"
     assert len(broken.calls) == calls_to_broken, "the dead provider was not called again"
+
+
+# -- hedging ------------------------------------------------------------------
+
+
+def hedging_settings(**overrides: Any) -> Settings:
+    return settings_with(
+        timeouts={"enabled": True, "total_s": 30.0},
+        retries={"enabled": False},
+        circuit_breaker={"enabled": False},
+        fallback={"enabled": True, "max_providers": 3},
+        hedging={"enabled": True, "delay_ms": 100, "max_in_flight": 2, **overrides},
+    )
+
+
+async def test_a_slow_provider_is_raced_and_the_faster_answer_wins() -> None:
+    """The failure mode hedging exists for: a provider that works, slowly.
+
+    Nothing else in the stack helps here. There is no error to retry, nothing for
+    the breaker to count, and no failure to trigger a fallback.
+    """
+    slow = StubAdapter("mock_primary", delay_s=2.0)
+    fast = StubAdapter("mock_secondary")
+    orchestrator, _ = build(
+        hedging_settings(),
+        {"mock_primary": slow, "mock_secondary": fast, "mock_tertiary": StubAdapter("t")},
+    )
+
+    started = time.perf_counter()
+    result = await orchestrator.execute(REQUEST, route_name="chaos-default")
+    elapsed_s = time.perf_counter() - started
+
+    assert result.provider == "mock_secondary"
+    assert result.hedges == 1
+    assert result.fallbacks == 1, "the answer came from the second link of the chain"
+    assert slow.calls, "the slow provider was still given its chance first"
+    assert elapsed_s < 1.0, f"waited {elapsed_s:.2f}s instead of racing the slow provider"
+
+
+async def test_a_fast_provider_is_never_hedged() -> None:
+    """The delay is the whole design: below it, hedging costs nothing."""
+    fast = StubAdapter("mock_primary")
+    spare = StubAdapter("mock_secondary")
+    orchestrator, budget = build(
+        hedging_settings(),
+        {"mock_primary": fast, "mock_secondary": spare, "mock_tertiary": StubAdapter("t")},
+    )
+
+    result = await orchestrator.execute(REQUEST, route_name="chaos-default")
+    assert result.provider == "mock_primary"
+    assert result.hedges == 0
+    assert result.wasted_cost_usd == 0.0
+    assert spare.calls == [], "a healthy provider must not be duplicated"
+    assert budget.spent == pytest.approx(result.cost_usd)
+
+
+async def test_the_loser_of_a_hedge_race_is_cancelled_and_logged() -> None:
+    """A cancelled call still went out, so it is logged as spent work.
+
+    Without the record the attempt log would claim one provider call where two
+    were actually made, and the report would understate the load hedging creates.
+    """
+    slow = StubAdapter("mock_primary", delay_s=2.0)
+    orchestrator, _ = build(
+        hedging_settings(),
+        {
+            "mock_primary": slow,
+            "mock_secondary": StubAdapter("mock_secondary"),
+            "mock_tertiary": StubAdapter("t"),
+        },
+    )
+
+    result = await orchestrator.execute(REQUEST, route_name="chaos-default")
+    outcomes = {(record.provider, record.outcome) for record in result.attempt_records}
+    assert ("mock_primary", "cancelled") in outcomes
+    assert ("mock_secondary", "success") in outcomes
+    assert result.attempts == 2, "both calls were really made"
+    assert [record.attempt_no for record in result.attempt_records] == [1, 2]
+
+
+async def test_a_failure_moves_on_immediately_and_is_not_counted_as_a_hedge() -> None:
+    """Launching after a failure is a plain fallback: nothing runs in parallel."""
+    broken = StubAdapter("mock_primary", script=[provider_error(ErrorKind.SERVER_ERROR)])
+    spare = StubAdapter("mock_secondary")
+    orchestrator, _ = build(
+        hedging_settings(delay_ms=5000),
+        {"mock_primary": broken, "mock_secondary": spare, "mock_tertiary": StubAdapter("t")},
+    )
+
+    started = time.perf_counter()
+    result = await orchestrator.execute(REQUEST, route_name="chaos-default")
+    elapsed_s = time.perf_counter() - started
+
+    assert result.provider == "mock_secondary"
+    assert result.fallbacks == 1
+    assert result.hedges == 0, "nothing was in flight, so this is a fallback, not a hedge"
+    assert elapsed_s < 1.0, "a failure must not wait for the hedge delay"
+
+
+async def test_without_hedging_the_slow_provider_is_waited_out() -> None:
+    """Same providers, hedging off: this is the row hedging is compared against."""
+    slow = StubAdapter("mock_primary", delay_s=0.6)
+    fast = StubAdapter("mock_secondary")
+    settings = hedging_settings()
+    settings.reliability.hedging.enabled = False
+    orchestrator, _ = build(
+        settings,
+        {"mock_primary": slow, "mock_secondary": fast, "mock_tertiary": StubAdapter("t")},
+    )
+
+    started = time.perf_counter()
+    result = await orchestrator.execute(REQUEST, route_name="chaos-default")
+    elapsed_s = time.perf_counter() - started
+
+    assert result.provider == "mock_primary"
+    assert result.hedges == 0
+    assert fast.calls == []
+    assert elapsed_s >= 0.5, "without a hedge the client pays the slow provider's latency"
+
+
+async def test_the_deadline_still_bounds_a_hedged_request() -> None:
+    """Two providers in flight must not extend the wall-clock budget."""
+    settings = hedging_settings()
+    settings.reliability.timeouts.total_s = 0.4
+    adapters = {
+        name: StubAdapter(name, delay_s=5.0)
+        for name in ("mock_primary", "mock_secondary", "mock_tertiary")
+    }
+    orchestrator, _ = build(settings, adapters)
+
+    started = time.perf_counter()
+    with pytest.raises(DeadlineExceeded) as excinfo:
+        await orchestrator.execute(REQUEST, route_name="chaos-default")
+    elapsed_s = time.perf_counter() - started
+
+    assert excinfo.value.hedges == 1
+    assert excinfo.value.attempts == 2
+    assert elapsed_s < 1.5, f"the deadline of 0.4s was not enforced (took {elapsed_s:.2f}s)"
+    assert adapters["mock_tertiary"].calls == [], "max_in_flight=2 bounds the parallel calls"
+
+
+async def test_a_hedge_is_not_launched_when_there_is_no_time_left_for_it() -> None:
+    """A hedge that cannot finish before the deadline is not worth the money."""
+    settings = hedging_settings(delay_ms=300)
+    settings.reliability.timeouts.total_s = 0.2
+    slow = StubAdapter("mock_primary", delay_s=5.0)
+    spare = StubAdapter("mock_secondary")
+    orchestrator, _ = build(
+        settings,
+        {"mock_primary": slow, "mock_secondary": spare, "mock_tertiary": StubAdapter("t")},
+    )
+
+    with pytest.raises(DeadlineExceeded):
+        await orchestrator.execute(REQUEST, route_name="chaos-default")
+    assert spare.calls == [], "the deadline arrived before the hedge delay did"

@@ -38,7 +38,7 @@ PROFILES = "config/failure_profiles.yaml"
 #: covered by tests/test_orchestrator.py, which builds its own settings per case.
 ALL_MECHANISMS_OFF = {
     section: {"enabled": False}
-    for section in ("timeouts", "retries", "circuit_breaker", "fallback", "cache")
+    for section in ("timeouts", "retries", "circuit_breaker", "fallback", "hedging", "cache")
 }
 
 

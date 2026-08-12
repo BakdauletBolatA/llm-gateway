@@ -19,5 +19,7 @@ reliability:
   fallback:
     enabled: true
     max_providers: 3
+  hedging:
+    enabled: false
   cache:
     enabled: false

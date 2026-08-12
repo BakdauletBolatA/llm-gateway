@@ -3,8 +3,8 @@
   "scenario": "hang",
   "route": "chaos-default",
   "note": "выключены ретраи",
-  "started_at": "2026-08-12T02:17:42.725075+00:00",
-  "duration_s": 9.52,
+  "started_at": "2026-08-12T12:46:39.558071+00:00",
+  "duration_s": 1.84,
   "concurrency": 15,
   "client_timeout_s": 20.0,
   "workload": {
@@ -21,38 +21,41 @@
     "failures": 0,
     "success_rate": 1.0,
     "latency_ms": {
-      "p50": 45.2,
-      "p95": 8106.1,
-      "p99": 8298.5,
-      "mean": 793.3,
-      "max": 8308.6,
-      "min": 7.7
+      "p50": 82.5,
+      "p95": 558.9,
+      "p99": 632.9,
+      "mean": 134.9,
+      "max": 642.0,
+      "min": 8.5
     },
     "latency_ms_success_only": {
-      "p50": 45.2,
-      "p95": 8106.1,
-      "p99": 8298.5,
-      "mean": 793.3,
-      "max": 8308.6,
-      "min": 7.7
+      "p50": 82.5,
+      "p95": 558.9,
+      "p99": 632.9,
+      "mean": 134.9,
+      "max": 642.0,
+      "min": 8.5
     },
-    "attempts_total": 75,
+    "attempts_total": 70,
     "retries_total": 0,
-    "fallbacks_total": 13,
+    "fallbacks_total": 11,
     "breaker_skips_total": 0,
-    "cache_hits": 88,
-    "cache_hit_rate": 0.5867,
-    "cost_usd_client": 0.010101,
+    "hedges_total": 11,
+    "hedged_requests": 11,
+    "cache_hits": 91,
+    "cache_hit_rate": 0.6067,
+    "cost_usd_client": 0.009134,
+    "cost_usd_wasted": 0.0,
     "outcomes": {
       "success": 150
     },
     "error_kinds": {},
     "providers_used": {
-      "mock_primary": 137,
-      "mock_secondary": 13
+      "mock_primary": 138,
+      "mock_secondary": 12
     },
-    "throughput_rps": 15.75,
-    "cost_usd_server": 0.010101
+    "throughput_rps": 81.56,
+    "cost_usd_server": 0.009134
   },
   "gateway_config": {
     "reliability": {
@@ -91,6 +94,11 @@
       "fallback": {
         "enabled": true,
         "max_providers": 3
+      },
+      "hedging": {
+        "enabled": true,
+        "delay_ms": 400,
+        "max_in_flight": 2
       },
       "cache": {
         "enabled": true,
@@ -187,8 +195,8 @@
         "provider": "mock_primary",
         "enabled": true,
         "state": "closed",
-        "window_calls": 62,
-        "failure_ratio": 0.2097,
+        "window_calls": 48,
+        "failure_ratio": 0.0,
         "cooldown_remaining_s": 0.0,
         "opened_count": 0,
         "short_circuited": 0
@@ -197,7 +205,7 @@
         "provider": "mock_secondary",
         "enabled": true,
         "state": "closed",
-        "window_calls": 13,
+        "window_calls": 11,
         "failure_ratio": 0.0,
         "cooldown_remaining_s": 0.0,
         "opened_count": 0,
@@ -218,17 +226,17 @@
       "enabled": true,
       "embedder": "hashing",
       "lookups": 150,
-      "hits": 88,
-      "stores": 62,
+      "hits": 91,
+      "stores": 59,
       "errors": 0,
-      "hit_rate": 0.5867
+      "hit_rate": 0.6067
     },
     "budget": {
       "period": "day",
       "period_start": "2026-08-12T00:00:00+00:00",
       "limit_usd": 25.0,
-      "spent_usd": 1.801265,
-      "remaining_usd": 23.198735,
+      "spent_usd": 1.224474,
+      "remaining_usd": 23.775526,
       "per_key": {}
     },
     "recorder": {
@@ -244,22 +252,22 @@
       {
         "upstream": "primary",
         "profile": "hang",
-        "served": 62,
+        "served": 59,
         "deck_size": 100,
-        "cursor": 62,
+        "cursor": 59,
         "counts": {
-          "hang": 13,
-          "ok": 49
+          "hang": 11,
+          "ok": 48
         }
       },
       {
         "upstream": "secondary",
         "profile": "healthy",
-        "served": 13,
+        "served": 11,
         "deck_size": 100,
-        "cursor": 13,
+        "cursor": 11,
         "counts": {
-          "ok": 13
+          "ok": 11
         }
       },
       {

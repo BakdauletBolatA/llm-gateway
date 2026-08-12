@@ -20,6 +20,7 @@ declare -a ABLATIONS=(
   "no_retries:выключены ретраи"
   "no_breaker:выключен circuit breaker"
   "no_fallback:выключен fallback"
+  "no_hedging:выключено хеджирование"
   "no_cache:выключен семантический кэш"
   "breaker_ratio_09:circuit breaker открывается только при 90% отказов"
 )

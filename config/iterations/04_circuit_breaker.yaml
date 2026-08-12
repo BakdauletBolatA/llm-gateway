@@ -20,5 +20,7 @@ reliability:
     half_open_max_calls: 2
   fallback:
     enabled: false
+  hedging:
+    enabled: false
   cache:
     enabled: false

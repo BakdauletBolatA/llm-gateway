@@ -65,6 +65,7 @@ class GatewayError(Exception):
         self.retries: int = 0
         self.fallbacks: int = 0
         self.breaker_skips: int = 0
+        self.hedges: int = 0
         self.provider_latency_ms: int = 0
         self.attempt_records: list[Any] = []
 
