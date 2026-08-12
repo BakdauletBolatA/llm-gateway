@@ -99,8 +99,16 @@ def provider_error(kind: ErrorKind, retry_after_s: float | None = None) -> Provi
 
 
 def settings_with(**reliability: dict[str, Any]) -> Settings:
-    base = load_settings("config/gateway.yaml")
-    tree = base.model_dump()
+    """Shipped config with every mechanism forced off, then the requested patches.
+
+    Starting from "all off" rather than from whatever config/gateway.yaml
+    currently ships keeps these tests meaningful as iterations flip flags: a test
+    that does not mention fallback must not silently acquire a three-provider
+    chain later.
+    """
+    tree = load_settings("config/gateway.yaml").model_dump()
+    for section in ("timeouts", "retries", "circuit_breaker", "fallback", "cache"):
+        tree["reliability"][section]["enabled"] = False
     for section, patch in reliability.items():
         tree["reliability"][section].update(patch)
     return Settings.model_validate(tree)
@@ -350,3 +358,107 @@ async def test_a_disabled_breaker_never_short_circuits() -> None:
             await orchestrator.execute(REQUEST, route_name="chaos-default")
         assert excinfo.value.kind is ErrorKind.SERVER_ERROR
     assert len(adapter.calls) == 6
+
+
+# -- fallback chain -----------------------------------------------------------
+
+
+def fallback_settings(**overrides: Any) -> Settings:
+    return settings_with(
+        timeouts={"enabled": True, "total_s": 30.0},
+        retries={"enabled": False},
+        circuit_breaker={"enabled": False},
+        fallback={"enabled": True, "max_providers": 3, **overrides},
+    )
+
+
+async def test_the_chain_moves_to_the_next_provider_on_failure() -> None:
+    first = StubAdapter("mock_primary", script=[provider_error(ErrorKind.SERVER_ERROR)])
+    second = StubAdapter("mock_secondary")
+    third = StubAdapter("mock_tertiary")
+    orchestrator, _ = build(
+        fallback_settings(),
+        {"mock_primary": first, "mock_secondary": second, "mock_tertiary": third},
+    )
+
+    result = await orchestrator.execute(REQUEST, route_name="chaos-default")
+    assert result.provider == "mock_secondary"
+    assert result.fallbacks == 1
+    assert third.calls == [], "the chain must stop at the first provider that answers"
+
+
+async def test_the_chain_walks_all_the_way_down() -> None:
+    adapters = {
+        "mock_primary": StubAdapter("mock_primary", [provider_error(ErrorKind.SERVER_ERROR)]),
+        "mock_secondary": StubAdapter("mock_secondary", [provider_error(ErrorKind.OVERLOADED)]),
+        "mock_tertiary": StubAdapter("mock_tertiary"),
+    }
+    orchestrator, _ = build(fallback_settings(), adapters)
+
+    result = await orchestrator.execute(REQUEST, route_name="chaos-default")
+    assert result.provider == "mock_tertiary"
+    assert result.fallbacks == 2
+    assert result.cost_usd == 0.0, "the local model is priced at zero in the shipped config"
+
+
+async def test_when_every_provider_fails_the_last_error_is_returned() -> None:
+    adapters = {
+        name: StubAdapter(name, [provider_error(ErrorKind.SERVER_ERROR)])
+        for name in ("mock_primary", "mock_secondary", "mock_tertiary")
+    }
+    orchestrator, _ = build(fallback_settings(), adapters)
+
+    with pytest.raises(ProviderError) as excinfo:
+        await orchestrator.execute(REQUEST, route_name="chaos-default")
+    assert excinfo.value.fallbacks == 2
+    assert excinfo.value.attempts == 3
+
+
+async def test_max_providers_bounds_the_chain() -> None:
+    adapters = {
+        "mock_primary": StubAdapter("mock_primary", [provider_error(ErrorKind.SERVER_ERROR)]),
+        "mock_secondary": StubAdapter("mock_secondary", [provider_error(ErrorKind.SERVER_ERROR)]),
+        "mock_tertiary": StubAdapter("mock_tertiary"),
+    }
+    orchestrator, _ = build(fallback_settings(max_providers=2), adapters)
+
+    with pytest.raises(ProviderError):
+        await orchestrator.execute(REQUEST, route_name="chaos-default")
+    assert adapters["mock_tertiary"].calls == []
+
+
+async def test_a_hop_skipped_by_an_open_breaker_still_counts_as_a_fallback() -> None:
+    """The metric must reflect where the traffic actually went.
+
+    An earlier version counted only hops it had called, so a request served by
+    the second provider because the first one's breaker was open was reported as
+    "no fallback" — which understated the shift by an order of magnitude.
+    """
+    settings = settings_with(
+        timeouts={"enabled": True, "total_s": 30.0},
+        retries={"enabled": False},
+        circuit_breaker={
+            "enabled": True,
+            "min_calls": 2,
+            "failure_ratio": 0.5,
+            "window_s": 60.0,
+            "cooldown_s": 60.0,
+        },
+        fallback={"enabled": True, "max_providers": 3},
+    )
+    broken = StubAdapter("mock_primary", [provider_error(ErrorKind.SERVER_ERROR)] * 10)
+    spare = StubAdapter("mock_secondary")
+    orchestrator, _ = build(
+        settings,
+        {"mock_primary": broken, "mock_secondary": spare, "mock_tertiary": StubAdapter("t")},
+    )
+
+    for _ in range(2):
+        await orchestrator.execute(REQUEST, route_name="chaos-default")
+    calls_to_broken = len(broken.calls)
+
+    result = await orchestrator.execute(REQUEST, route_name="chaos-default")
+    assert result.provider == "mock_secondary"
+    assert result.breaker_skips == 1
+    assert result.fallbacks == 1, "traffic moved to another provider: that is a fallback"
+    assert len(broken.calls) == calls_to_broken, "the dead provider was not called again"

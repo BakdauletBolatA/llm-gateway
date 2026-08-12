@@ -70,14 +70,20 @@ class _Progress:
 
     attempts: int = 0
     retries: int = 0
-    hops_used: int = 0
+    hop_index: int = 0
     breaker_skips: int = 0
     provider_latency_ms: int = 0
     records: list[AttemptRecord] = field(default_factory=list)
 
     @property
     def fallbacks(self) -> int:
-        return max(0, self.hops_used - 1)
+        """How many providers were passed over before the one that answered.
+
+        Counted by position in the chain rather than by "hops actually called",
+        because a hop skipped by an open circuit breaker is still a fallback from
+        the client's point of view — that is precisely when the traffic moves.
+        """
+        return self.hop_index
 
     def apply_to(self, error: GatewayError) -> GatewayError:
         error.attempts = self.attempts
@@ -183,6 +189,7 @@ class Orchestrator:
             adapter = self.registry.adapter(hop.provider)
             client = self.registry.client(hop.provider)
             breaker = self.breakers.get(hop.provider)
+            progress.hop_index = hop_index
             hop_entered = False
 
             for attempt_in_hop in range(1, max_attempts + 1):
@@ -219,9 +226,7 @@ class Orchestrator:
                 progress.attempts += 1
                 if hop_entered:
                     progress.retries += 1
-                else:
-                    progress.hops_used += 1
-                    hop_entered = True
+                hop_entered = True
 
                 call_started = time.monotonic()
                 try:

@@ -76,7 +76,7 @@ reliability:
     half_open_max_calls: 2
 
   fallback:
-    enabled: false
+    enabled: true
     max_providers: 3         # сколько звеньев цепочки маршрута использовать
 
   cache:

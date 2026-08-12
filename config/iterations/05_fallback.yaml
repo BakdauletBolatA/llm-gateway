@@ -1,0 +1,23 @@
+# Итерация 5 — fallback-цепочка между провайдерами.
+#
+# Цепочка маршрута chaos-default пересекает три диалекта API:
+#   mock_primary   (OpenAI  /v1/chat/completions)
+#   mock_secondary (Anthropic /v1/messages)
+#   mock_tertiary  (Ollama  /api/chat)
+# То есть при переходе по цепочке реально переводится формат запроса и ответа,
+# а не просто меняется хост.
+#
+# max_providers ограничивает, сколько звеньев использовать: при enabled: false
+# берётся только первое звено — так получается базовая строка отчёта.
+reliability:
+  timeouts:
+    enabled: true
+  retries:
+    enabled: true
+  circuit_breaker:
+    enabled: true
+  fallback:
+    enabled: true
+    max_providers: 3
+  cache:
+    enabled: false
