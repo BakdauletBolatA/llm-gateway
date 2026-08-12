@@ -16,8 +16,6 @@ from typing import Any
 import httpx
 import pytest
 
-from llm_gateway.cache.embedder import HashingEmbedder
-from llm_gateway.cache.store import SemanticCache
 from llm_gateway.errors import ErrorKind, ProviderError
 from llm_gateway.providers.base import ProviderResponse
 from llm_gateway.providers.registry import build_timeout
@@ -200,3 +198,81 @@ async def test_without_a_deadline_every_attempt_is_used() -> None:
     with pytest.raises(ProviderError):
         await orchestrator.execute(REQUEST, route_name="chaos-default")
     assert len(adapter.calls) == 3
+
+
+# -- retries ------------------------------------------------------------------
+
+
+def retry_settings(**overrides: Any) -> Settings:
+    return settings_with(
+        timeouts={"enabled": True, "total_s": 30.0},
+        retries={
+            "enabled": True,
+            "max_attempts": 3,
+            "base_delay_ms": 1,
+            "jitter": "none",
+            **overrides,
+        },
+    )
+
+
+async def test_a_transient_failure_is_retried_and_the_request_succeeds() -> None:
+    adapter = StubAdapter("mock_primary", script=[provider_error(ErrorKind.SERVER_ERROR)])
+    orchestrator, _ = build(retry_settings(), {"mock_primary": adapter})
+
+    result = await orchestrator.execute(REQUEST, route_name="chaos-default")
+    assert result.attempts == 2
+    assert result.retries == 1
+    assert result.fallbacks == 0
+    assert len(adapter.calls) == 2
+
+
+async def test_retries_stop_at_max_attempts() -> None:
+    adapter = StubAdapter("mock_primary", script=[provider_error(ErrorKind.SERVER_ERROR)] * 5)
+    orchestrator, _ = build(retry_settings(max_attempts=3), {"mock_primary": adapter})
+
+    with pytest.raises(ProviderError) as excinfo:
+        await orchestrator.execute(REQUEST, route_name="chaos-default")
+    assert len(adapter.calls) == 3
+    assert excinfo.value.attempts == 3
+    assert excinfo.value.retries == 2
+
+
+async def test_a_client_error_is_not_retried() -> None:
+    """Retrying a malformed request just multiplies the same 400."""
+    adapter = StubAdapter("mock_primary", script=[provider_error(ErrorKind.BAD_REQUEST)])
+    orchestrator, _ = build(retry_settings(), {"mock_primary": adapter})
+
+    with pytest.raises(ProviderError) as excinfo:
+        await orchestrator.execute(REQUEST, route_name="chaos-default")
+    assert excinfo.value.kind is ErrorKind.BAD_REQUEST
+    assert len(adapter.calls) == 1
+
+
+async def test_an_error_kind_absent_from_retry_on_is_not_retried() -> None:
+    adapter = StubAdapter("mock_primary", script=[provider_error(ErrorKind.AUTH)])
+    orchestrator, _ = build(retry_settings(retry_on=["timeout"]), {"mock_primary": adapter})
+
+    with pytest.raises(ProviderError):
+        await orchestrator.execute(REQUEST, route_name="chaos-default")
+    assert len(adapter.calls) == 1
+
+
+async def test_disabled_retries_make_exactly_one_attempt() -> None:
+    settings = settings_with(retries={"enabled": False}, timeouts={"enabled": True})
+    adapter = StubAdapter("mock_primary", script=[provider_error(ErrorKind.SERVER_ERROR)])
+    orchestrator, _ = build(settings, {"mock_primary": adapter})
+
+    with pytest.raises(ProviderError):
+        await orchestrator.execute(REQUEST, route_name="chaos-default")
+    assert len(adapter.calls) == 1
+
+
+async def test_a_healthy_provider_is_called_once_and_billed_once() -> None:
+    adapter = StubAdapter("mock_primary")
+    orchestrator, budget = build(retry_settings(), {"mock_primary": adapter})
+
+    result = await orchestrator.execute(REQUEST, route_name="chaos-default")
+    assert result.attempts == 1 and result.retries == 0
+    assert result.cost_usd > 0
+    assert budget.spent == pytest.approx(result.cost_usd)

@@ -52,7 +52,7 @@ reliability:
     total_s: 12.0
 
   retries:
-    enabled: false
+    enabled: true
     max_attempts: 3          # суммарно попыток на одного провайдера, не «дополнительных»
     base_delay_ms: 120
     max_delay_ms: 2000

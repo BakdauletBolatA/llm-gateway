@@ -1,0 +1,27 @@
+# Итерация 3 — экспоненциальные ретраи с джиттером.
+#
+# max_attempts — это ВСЕГО попыток к одному провайдеру, а не «дополнительных».
+# jitter: full — задержка равномерно размазывается по всему окну. Без джиттера
+# N клиентов, упавших одновременно, вернутся одновременно и повторят тот же
+# всплеск, который положил провайдера.
+# respect_retry_after — 429 с Retry-After обрабатывается по указанию провайдера,
+# а не по нашей лестнице; max_retry_after_s ограничивает, насколько долго один
+# провайдер может задержать запрос.
+reliability:
+  timeouts:
+    enabled: true
+  retries:
+    enabled: true
+    max_attempts: 3
+    base_delay_ms: 120
+    max_delay_ms: 2000
+    jitter: full
+    respect_retry_after: true
+    max_retry_after_s: 3.0
+    retry_on: [timeout, connection, rate_limited, server_error, overloaded, invalid_response]
+  circuit_breaker:
+    enabled: false
+  fallback:
+    enabled: false
+  cache:
+    enabled: false
