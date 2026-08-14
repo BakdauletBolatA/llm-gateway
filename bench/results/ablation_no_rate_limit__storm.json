@@ -3,8 +3,8 @@
   "scenario": "storm",
   "route": "chaos-default",
   "note": "выключен rate limit на входе",
-  "started_at": "2026-08-12T22:33:30.913104+00:00",
-  "duration_s": 1.21,
+  "started_at": "2026-08-14T05:56:15.475090+00:00",
+  "duration_s": 1.37,
   "concurrency": 15,
   "client_timeout_s": 20.0,
   "workload": {
@@ -21,41 +21,41 @@
     "failures": 0,
     "success_rate": 1.0,
     "latency_ms": {
-      "p50": 62.8,
-      "p95": 325.6,
-      "p99": 610.2,
-      "mean": 106.7,
-      "max": 613.4,
-      "min": 5.6
+      "p50": 79.4,
+      "p95": 350.9,
+      "p99": 653.6,
+      "mean": 123.3,
+      "max": 667.9,
+      "min": 17.1
     },
     "latency_ms_success_only": {
-      "p50": 62.8,
-      "p95": 325.6,
-      "p99": 610.2,
-      "mean": 106.7,
-      "max": 613.4,
-      "min": 5.6
+      "p50": 79.4,
+      "p95": 350.9,
+      "p99": 653.6,
+      "mean": 123.3,
+      "max": 667.9,
+      "min": 17.1
     },
-    "attempts_total": 70,
+    "attempts_total": 71,
     "retries_total": 1,
-    "fallbacks_total": 53,
-    "breaker_skips_total": 50,
+    "fallbacks_total": 54,
+    "breaker_skips_total": 51,
     "hedges_total": 3,
     "hedged_requests": 3,
-    "cache_hits": 91,
-    "cache_hit_rate": 0.6067,
-    "cost_usd_client": 0.027335,
+    "cache_hits": 90,
+    "cache_hit_rate": 0.6,
+    "cost_usd_client": 0.028066,
     "cost_usd_wasted": 0.0,
     "outcomes": {
       "success": 150
     },
     "error_kinds": {},
     "providers_used": {
-      "mock_primary": 36,
-      "mock_secondary": 114
+      "mock_primary": 30,
+      "mock_secondary": 120
     },
-    "throughput_rps": 124.48,
-    "cost_usd_server": 0.027335
+    "throughput_rps": 109.24,
+    "cost_usd_server": 0.028066
   },
   "gateway_config": {
     "reliability": {
@@ -89,7 +89,8 @@
         "min_calls": 8,
         "failure_ratio": 0.5,
         "cooldown_s": 4.0,
-        "half_open_max_calls": 2
+        "half_open_max_calls": 2,
+        "retry_after_is_backpressure": true
       },
       "fallback": {
         "enabled": true,
@@ -205,17 +206,17 @@
         "provider": "mock_primary",
         "enabled": true,
         "state": "open",
-        "window_calls": 9,
-        "failure_ratio": 0.5556,
-        "cooldown_remaining_s": 2.994,
+        "window_calls": 6,
+        "failure_ratio": 0.5,
+        "cooldown_remaining_s": 2.839,
         "opened_count": 1,
-        "short_circuited": 50
+        "short_circuited": 51
       },
       {
         "provider": "mock_secondary",
         "enabled": true,
         "state": "closed",
-        "window_calls": 53,
+        "window_calls": 54,
         "failure_ratio": 0.0,
         "cooldown_remaining_s": 0.0,
         "opened_count": 0,
@@ -247,10 +248,10 @@
         "provider": "mock_secondary",
         "limit": 16,
         "in_flight": 0,
-        "admitted": 53,
+        "admitted": 54,
         "queued": 0,
         "shed": 0,
-        "peak_in_flight": 15,
+        "peak_in_flight": 13,
         "avg_queue_wait_ms": 0.0
       },
       {
@@ -274,17 +275,17 @@
       "enabled": true,
       "embedder": "hashing",
       "lookups": 150,
-      "hits": 91,
-      "stores": 59,
+      "hits": 90,
+      "stores": 60,
       "errors": 0,
-      "hit_rate": 0.6067
+      "hit_rate": 0.6
     },
     "budget": {
       "period": "day",
-      "period_start": "2026-08-12T00:00:00+00:00",
+      "period_start": "2026-08-14T00:00:00+00:00",
       "limit_usd": 25.0,
-      "spent_usd": 2.792102,
-      "remaining_usd": 22.207898,
+      "spent_usd": 0.740697,
+      "remaining_usd": 24.259303,
       "per_key": {}
     },
     "recorder": {
@@ -318,14 +319,14 @@
       {
         "upstream": "secondary",
         "profile": "healthy",
-        "served": 53,
+        "served": 54,
         "deck_size": 100,
-        "cursor": 53,
+        "cursor": 54,
         "counts": {
-          "ok": 53
+          "ok": 54
         },
         "max_concurrency": 0,
-        "peak_in_flight": 13,
+        "peak_in_flight": 12,
         "rejected_overload": 0
       },
       {

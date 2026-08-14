@@ -21,6 +21,7 @@ reliability:
     retry_on: [timeout, connection, rate_limited, server_error, overloaded, invalid_response]
   circuit_breaker:
     enabled: false
+    retry_after_is_backpressure: false
   fallback:
     enabled: false
   hedging:

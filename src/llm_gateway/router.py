@@ -235,6 +235,19 @@ class Orchestrator:
         remaining = max(remaining, 0.0)
         return remaining if wait is None else min(wait, remaining)
 
+    def _is_backpressure(self, error: ProviderError) -> bool:
+        """Did the provider answer "I am alive, come back in N seconds"?
+
+        A `Retry-After` header is the provider telling us its own terms, which is
+        not the same signal as a failure. When this is on, such a call is left out
+        of the breaker's window entirely: it says nothing about whether the provider
+        is healthy, only that it is busy right now.
+        """
+        return (
+            self.settings.reliability.circuit_breaker.retry_after_is_backpressure
+            and error.retry_after_s is not None
+        )
+
     def _estimate_cost(self, request: ChatCompletionRequest, provider: str, model: str) -> float:
         tokens_in = estimate_tokens(request.prompt_text())
         tokens_out = request.max_tokens or self.settings.budget.estimate_output_tokens
@@ -593,7 +606,8 @@ class Orchestrator:
                 latency_ms = int((time.monotonic() - call_started) * 1000)
                 progress.provider_latency_ms += latency_ms
                 client_fault = error.kind in CLIENT_FAULT_KINDS
-                breaker.record(ok=client_fault)
+                if not self._is_backpressure(error):
+                    breaker.record(ok=client_fault)
                 progress.records.append(
                     AttemptRecord(
                         attempt_no=progress.attempts,

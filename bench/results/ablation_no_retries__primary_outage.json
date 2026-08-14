@@ -3,8 +3,8 @@
   "scenario": "primary_outage",
   "route": "chaos-default",
   "note": "выключены ретраи",
-  "started_at": "2026-08-12T22:30:28.845205+00:00",
-  "duration_s": 1.06,
+  "started_at": "2026-08-14T05:52:25.689617+00:00",
+  "duration_s": 1.31,
   "concurrency": 15,
   "client_timeout_s": 20.0,
   "workload": {
@@ -21,41 +21,41 @@
     "failures": 0,
     "success_rate": 1.0,
     "latency_ms": {
-      "p50": 61.4,
-      "p95": 201.9,
-      "p99": 245.5,
-      "mean": 90.8,
-      "max": 250.3,
-      "min": 31.5
+      "p50": 97.8,
+      "p95": 241.5,
+      "p99": 267.7,
+      "mean": 114.5,
+      "max": 270.9,
+      "min": 34.4
     },
     "latency_ms_success_only": {
-      "p50": 61.4,
-      "p95": 201.9,
-      "p99": 245.5,
-      "mean": 90.8,
-      "max": 250.3,
-      "min": 31.5
+      "p50": 97.8,
+      "p95": 241.5,
+      "p99": 267.7,
+      "mean": 114.5,
+      "max": 270.9,
+      "min": 34.4
     },
     "attempts_total": 69,
     "retries_total": 0,
-    "fallbacks_total": 46,
-    "breaker_skips_total": 33,
+    "fallbacks_total": 47,
+    "breaker_skips_total": 35,
     "hedges_total": 0,
     "hedged_requests": 0,
-    "cache_hits": 94,
-    "cache_hit_rate": 0.6267,
-    "cost_usd_client": 0.02334,
+    "cache_hits": 93,
+    "cache_hit_rate": 0.62,
+    "cost_usd_client": 0.02404,
     "cost_usd_wasted": 0.0,
     "outcomes": {
       "success": 150
     },
     "error_kinds": {},
     "providers_used": {
-      "mock_primary": 59,
-      "mock_secondary": 91
+      "mock_primary": 71,
+      "mock_secondary": 79
     },
-    "throughput_rps": 141.15,
-    "cost_usd_server": 0.02334
+    "throughput_rps": 114.93,
+    "cost_usd_server": 0.02404
   },
   "gateway_config": {
     "reliability": {
@@ -89,7 +89,8 @@
         "min_calls": 8,
         "failure_ratio": 0.5,
         "cooldown_s": 4.0,
-        "half_open_max_calls": 2
+        "half_open_max_calls": 2,
+        "retry_after_is_backpressure": true
       },
       "fallback": {
         "enabled": true,
@@ -205,17 +206,17 @@
         "provider": "mock_primary",
         "enabled": true,
         "state": "open",
-        "window_calls": 3,
+        "window_calls": 2,
         "failure_ratio": 1.0,
-        "cooldown_remaining_s": 3.135,
+        "cooldown_remaining_s": 2.883,
         "opened_count": 1,
-        "short_circuited": 33
+        "short_circuited": 35
       },
       {
         "provider": "mock_secondary",
         "enabled": true,
         "state": "closed",
-        "window_calls": 46,
+        "window_calls": 47,
         "failure_ratio": 0.0,
         "cooldown_remaining_s": 0.0,
         "opened_count": 0,
@@ -237,17 +238,17 @@
         "provider": "mock_primary",
         "limit": 16,
         "in_flight": 0,
-        "admitted": 23,
+        "admitted": 22,
         "queued": 0,
         "shed": 0,
-        "peak_in_flight": 10,
+        "peak_in_flight": 11,
         "avg_queue_wait_ms": 0.0
       },
       {
         "provider": "mock_secondary",
         "limit": 16,
         "in_flight": 0,
-        "admitted": 46,
+        "admitted": 47,
         "queued": 0,
         "shed": 0,
         "peak_in_flight": 11,
@@ -270,7 +271,7 @@
       "burst": 400,
       "scopes": {
         "__global__": {
-          "tokens": 393.72,
+          "tokens": 398.6,
           "allowed": 150,
           "throttled": 0
         }
@@ -280,17 +281,17 @@
       "enabled": true,
       "embedder": "hashing",
       "lookups": 150,
-      "hits": 94,
-      "stores": 56,
+      "hits": 93,
+      "stores": 57,
       "errors": 0,
-      "hit_rate": 0.6267
+      "hit_rate": 0.62
     },
     "budget": {
       "period": "day",
-      "period_start": "2026-08-12T00:00:00+00:00",
+      "period_start": "2026-08-14T00:00:00+00:00",
       "limit_usd": 25.0,
-      "spent_usd": 2.480884,
-      "remaining_usd": 22.519116,
+      "spent_usd": 0.382369,
+      "remaining_usd": 24.617631,
       "per_key": {}
     },
     "recorder": {
@@ -306,25 +307,25 @@
       {
         "upstream": "primary",
         "profile": "degraded_then_dead",
-        "served": 23,
+        "served": 22,
         "deck_size": 100,
-        "cursor": 13,
+        "cursor": 12,
         "counts": {
-          "http_500": 13,
+          "http_500": 12,
           "ok": 10
         },
         "max_concurrency": 0,
-        "peak_in_flight": 7,
+        "peak_in_flight": 8,
         "rejected_overload": 0
       },
       {
         "upstream": "secondary",
         "profile": "healthy",
-        "served": 46,
+        "served": 47,
         "deck_size": 100,
-        "cursor": 46,
+        "cursor": 47,
         "counts": {
-          "ok": 46
+          "ok": 47
         },
         "max_concurrency": 0,
         "peak_in_flight": 10,

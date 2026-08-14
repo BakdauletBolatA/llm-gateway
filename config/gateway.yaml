@@ -76,6 +76,10 @@ reliability:
     failure_ratio: 0.5
     cooldown_s: 4.0
     half_open_max_calls: 2
+    # Ответ с заголовком Retry-After — это «я жив, приди через N секунд», а не
+    # поломка: такой вызов вообще не попадает в окно брейкера. Без этого провайдер,
+    # у которого просто кончилась квота, выглядит мёртвым — см. итерацию 9.
+    retry_after_is_backpressure: true
 
   fallback:
     enabled: true

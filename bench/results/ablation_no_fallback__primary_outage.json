@@ -3,8 +3,8 @@
   "scenario": "primary_outage",
   "route": "chaos-default",
   "note": "выключен fallback",
-  "started_at": "2026-08-12T22:31:48.021281+00:00",
-  "duration_s": 0.7,
+  "started_at": "2026-08-14T05:54:01.140854+00:00",
+  "duration_s": 1.09,
   "concurrency": 15,
   "client_timeout_s": 20.0,
   "workload": {
@@ -17,47 +17,49 @@
   },
   "results": {
     "requests": 150,
-    "successes": 67,
-    "failures": 83,
-    "success_rate": 0.4467,
+    "successes": 57,
+    "failures": 93,
+    "success_rate": 0.38,
     "latency_ms": {
-      "p50": 52.4,
-      "p95": 157.2,
-      "p99": 256.6,
-      "mean": 64.2,
-      "max": 314.0,
-      "min": 10.5
+      "p50": 76.2,
+      "p95": 256.2,
+      "p99": 397.8,
+      "mean": 100.4,
+      "max": 417.0,
+      "min": 32.6
     },
     "latency_ms_success_only": {
-      "p50": 52.4,
-      "p95": 81.5,
-      "p99": 94.3,
-      "mean": 54.0,
-      "max": 94.3,
-      "min": 10.8
+      "p50": 76.6,
+      "p95": 214.5,
+      "p99": 280.6,
+      "mean": 90.2,
+      "max": 280.6,
+      "min": 36.4
     },
-    "attempts_total": 27,
-    "retries_total": 4,
+    "attempts_total": 26,
+    "retries_total": 5,
     "fallbacks_total": 0,
-    "breaker_skips_total": 83,
+    "breaker_skips_total": 92,
     "hedges_total": 0,
     "hedged_requests": 0,
-    "cache_hits": 57,
-    "cache_hit_rate": 0.38,
-    "cost_usd_client": 0.000301,
+    "cache_hits": 47,
+    "cache_hit_rate": 0.3133,
+    "cost_usd_client": 0.0003,
     "cost_usd_wasted": 0.0,
     "outcomes": {
-      "http_503": 83,
-      "success": 67
+      "http_502": 1,
+      "http_503": 92,
+      "success": 57
     },
     "error_kinds": {
-      "circuit_open": 83
+      "circuit_open": 92,
+      "server_error": 1
     },
     "providers_used": {
-      "mock_primary": 67
+      "mock_primary": 57
     },
-    "throughput_rps": 213.93,
-    "cost_usd_server": 0.000301
+    "throughput_rps": 137.58,
+    "cost_usd_server": 0.0003
   },
   "gateway_config": {
     "reliability": {
@@ -91,7 +93,8 @@
         "min_calls": 8,
         "failure_ratio": 0.5,
         "cooldown_s": 4.0,
-        "half_open_max_calls": 2
+        "half_open_max_calls": 2,
+        "retry_after_is_backpressure": true
       },
       "fallback": {
         "enabled": false,
@@ -207,11 +210,11 @@
         "provider": "mock_primary",
         "enabled": true,
         "state": "open",
-        "window_calls": 7,
+        "window_calls": 6,
         "failure_ratio": 1.0,
-        "cooldown_remaining_s": 3.455,
+        "cooldown_remaining_s": 3.134,
         "opened_count": 1,
-        "short_circuited": 83
+        "short_circuited": 92
       },
       {
         "provider": "mock_secondary",
@@ -239,10 +242,10 @@
         "provider": "mock_primary",
         "limit": 16,
         "in_flight": 0,
-        "admitted": 27,
+        "admitted": 26,
         "queued": 0,
         "shed": 0,
-        "peak_in_flight": 11,
+        "peak_in_flight": 14,
         "avg_queue_wait_ms": 0.0
       },
       {
@@ -272,7 +275,7 @@
       "burst": 400,
       "scopes": {
         "__global__": {
-          "tokens": 368.45,
+          "tokens": 399.0,
           "allowed": 150,
           "throttled": 0
         }
@@ -282,17 +285,17 @@
       "enabled": true,
       "embedder": "hashing",
       "lookups": 150,
-      "hits": 57,
+      "hits": 47,
       "stores": 10,
       "errors": 0,
-      "hit_rate": 0.38
+      "hit_rate": 0.3133
     },
     "budget": {
       "period": "day",
-      "period_start": "2026-08-12T00:00:00+00:00",
+      "period_start": "2026-08-14T00:00:00+00:00",
       "limit_usd": 25.0,
-      "spent_usd": 2.602388,
-      "remaining_usd": 22.397612,
+      "spent_usd": 0.524751,
+      "remaining_usd": 24.475249,
       "per_key": {}
     },
     "recorder": {
@@ -308,11 +311,11 @@
       {
         "upstream": "primary",
         "profile": "degraded_then_dead",
-        "served": 27,
+        "served": 26,
         "deck_size": 100,
-        "cursor": 17,
+        "cursor": 16,
         "counts": {
-          "http_500": 17,
+          "http_500": 16,
           "ok": 10
         },
         "max_concurrency": 0,

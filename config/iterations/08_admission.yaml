@@ -21,6 +21,7 @@ reliability:
     enabled: true
   circuit_breaker:
     enabled: true
+    retry_after_is_backpressure: false
   fallback:
     enabled: true
     max_providers: 3

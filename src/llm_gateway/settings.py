@@ -61,6 +61,10 @@ class CircuitBreakerConfig(BaseModel):
     failure_ratio: float = Field(default=0.5, gt=0.0, le=1.0)
     cooldown_s: float = 4.0
     half_open_max_calls: int = Field(default=2, ge=1)
+    #: Считать ли ответ с заголовком Retry-After отказом провайдера.
+    #: Такой ответ означает «я жив, приди через N секунд» — это backpressure, а не
+    #: поломка, и по умолчанию (false) брейкер открывается от него наравне с 500.
+    retry_after_is_backpressure: bool = False
 
 
 class FallbackConfig(BaseModel):

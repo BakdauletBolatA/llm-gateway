@@ -3,8 +3,8 @@
   "scenario": "slow",
   "route": "chaos-default",
   "note": "выключены ретраи",
-  "started_at": "2026-08-12T22:30:33.052848+00:00",
-  "duration_s": 2.53,
+  "started_at": "2026-08-14T05:52:30.169076+00:00",
+  "duration_s": 2.87,
   "concurrency": 15,
   "client_timeout_s": 20.0,
   "workload": {
@@ -21,20 +21,20 @@
     "failures": 0,
     "success_rate": 1.0,
     "latency_ms": {
-      "p50": 40.5,
-      "p95": 577.4,
-      "p99": 609.7,
-      "mean": 229.6,
-      "max": 611.0,
-      "min": 6.0
+      "p50": 54.9,
+      "p95": 599.4,
+      "p99": 637.4,
+      "mean": 247.0,
+      "max": 671.1,
+      "min": 8.1
     },
     "latency_ms_success_only": {
-      "p50": 40.5,
-      "p95": 577.4,
-      "p99": 609.7,
-      "mean": 229.6,
-      "max": 611.0,
-      "min": 6.0
+      "p50": 54.9,
+      "p95": 599.4,
+      "p99": 637.4,
+      "mean": 247.0,
+      "max": 671.1,
+      "min": 8.1
     },
     "attempts_total": 120,
     "retries_total": 0,
@@ -44,7 +44,7 @@
     "hedged_requests": 60,
     "cache_hits": 90,
     "cache_hit_rate": 0.6,
-    "cost_usd_client": 0.031136,
+    "cost_usd_client": 0.031138,
     "cost_usd_wasted": 0.0,
     "outcomes": {
       "success": 150
@@ -53,8 +53,8 @@
     "providers_used": {
       "mock_secondary": 150
     },
-    "throughput_rps": 59.23,
-    "cost_usd_server": 0.031136
+    "throughput_rps": 52.26,
+    "cost_usd_server": 0.031138
   },
   "gateway_config": {
     "reliability": {
@@ -88,7 +88,8 @@
         "min_calls": 8,
         "failure_ratio": 0.5,
         "cooldown_s": 4.0,
-        "half_open_max_calls": 2
+        "half_open_max_calls": 2,
+        "retry_after_is_backpressure": true
       },
       "fallback": {
         "enabled": true,
@@ -249,7 +250,7 @@
         "admitted": 60,
         "queued": 0,
         "shed": 0,
-        "peak_in_flight": 15,
+        "peak_in_flight": 14,
         "avg_queue_wait_ms": 0.0
       },
       {
@@ -286,10 +287,10 @@
     },
     "budget": {
       "period": "day",
-      "period_start": "2026-08-12T00:00:00+00:00",
+      "period_start": "2026-08-14T00:00:00+00:00",
       "limit_usd": 25.0,
-      "spent_usd": 2.51202,
-      "remaining_usd": 22.48798,
+      "spent_usd": 0.413507,
+      "remaining_usd": 24.586493,
       "per_key": {}
     },
     "recorder": {
@@ -312,7 +313,7 @@
           "ok": 60
         },
         "max_concurrency": 0,
-        "peak_in_flight": 55,
+        "peak_in_flight": 52,
         "rejected_overload": 0
       },
       {
@@ -325,7 +326,7 @@
           "ok": 60
         },
         "max_concurrency": 0,
-        "peak_in_flight": 15,
+        "peak_in_flight": 14,
         "rejected_overload": 0
       },
       {

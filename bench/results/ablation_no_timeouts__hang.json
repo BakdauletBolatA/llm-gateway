@@ -3,8 +3,8 @@
   "scenario": "hang",
   "route": "chaos-default",
   "note": "выключены таймауты",
-  "started_at": "2026-08-12T22:29:52.812560+00:00",
-  "duration_s": 1.42,
+  "started_at": "2026-08-14T05:51:40.015144+00:00",
+  "duration_s": 1.8,
   "concurrency": 15,
   "client_timeout_s": 20.0,
   "workload": {
@@ -21,20 +21,20 @@
     "failures": 0,
     "success_rate": 1.0,
     "latency_ms": {
-      "p50": 38.1,
-      "p95": 502.3,
-      "p99": 538.0,
-      "mean": 106.1,
-      "max": 561.4,
-      "min": 7.1
+      "p50": 78.3,
+      "p95": 542.9,
+      "p99": 591.6,
+      "mean": 140.2,
+      "max": 628.2,
+      "min": 33.7
     },
     "latency_ms_success_only": {
-      "p50": 38.1,
-      "p95": 502.3,
-      "p99": 538.0,
-      "mean": 106.1,
-      "max": 561.4,
-      "min": 7.1
+      "p50": 78.3,
+      "p95": 542.9,
+      "p99": 591.6,
+      "mean": 140.2,
+      "max": 628.2,
+      "min": 33.7
     },
     "attempts_total": 77,
     "retries_total": 0,
@@ -44,18 +44,18 @@
     "hedged_requests": 14,
     "cache_hits": 87,
     "cache_hit_rate": 0.58,
-    "cost_usd_client": 0.0104,
+    "cost_usd_client": 0.010412,
     "cost_usd_wasted": 0.0,
     "outcomes": {
       "success": 150
     },
     "error_kinds": {},
     "providers_used": {
-      "mock_primary": 131,
-      "mock_secondary": 19
+      "mock_primary": 132,
+      "mock_secondary": 18
     },
-    "throughput_rps": 105.53,
-    "cost_usd_server": 0.0104
+    "throughput_rps": 83.25,
+    "cost_usd_server": 0.010412
   },
   "gateway_config": {
     "reliability": {
@@ -89,7 +89,8 @@
         "min_calls": 8,
         "failure_ratio": 0.5,
         "cooldown_s": 4.0,
-        "half_open_max_calls": 2
+        "half_open_max_calls": 2,
+        "retry_after_is_backpressure": true
       },
       "fallback": {
         "enabled": true,
@@ -270,7 +271,7 @@
       "burst": 400,
       "scopes": {
         "__global__": {
-          "tokens": 395.35,
+          "tokens": 399.0,
           "allowed": 150,
           "throttled": 0
         }
@@ -287,10 +288,10 @@
     },
     "budget": {
       "period": "day",
-      "period_start": "2026-08-12T00:00:00+00:00",
+      "period_start": "2026-08-14T00:00:00+00:00",
       "limit_usd": 25.0,
-      "spent_usd": 2.364866,
-      "remaining_usd": 22.635134,
+      "spent_usd": 0.250764,
+      "remaining_usd": 24.749236,
       "per_key": {}
     },
     "recorder": {

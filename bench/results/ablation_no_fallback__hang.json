@@ -3,8 +3,8 @@
   "scenario": "hang",
   "route": "chaos-default",
   "note": "выключен fallback",
-  "started_at": "2026-08-12T22:31:27.903439+00:00",
-  "duration_s": 16.98,
+  "started_at": "2026-08-14T05:53:40.846834+00:00",
+  "duration_s": 17.12,
   "concurrency": 15,
   "client_timeout_s": 20.0,
   "workload": {
@@ -21,30 +21,30 @@
     "failures": 3,
     "success_rate": 0.98,
     "latency_ms": {
-      "p50": 31.4,
-      "p95": 8137.7,
-      "p99": 16059.0,
-      "mean": 972.6,
-      "max": 16086.0,
-      "min": 5.5
+      "p50": 51.2,
+      "p95": 8205.3,
+      "p99": 16066.0,
+      "mean": 984.2,
+      "max": 16195.4,
+      "min": 6.9
     },
     "latency_ms_success_only": {
-      "p50": 31.2,
-      "p95": 8121.0,
-      "p99": 8196.5,
-      "mean": 664.6,
-      "max": 8265.1,
-      "min": 5.5
+      "p50": 45.9,
+      "p95": 8148.3,
+      "p99": 8234.9,
+      "mean": 675.9,
+      "max": 8259.0,
+      "min": 6.9
     },
-    "attempts_total": 78,
+    "attempts_total": 79,
     "retries_total": 14,
     "fallbacks_total": 0,
     "breaker_skips_total": 0,
     "hedges_total": 0,
     "hedged_requests": 0,
-    "cache_hits": 86,
-    "cache_hit_rate": 0.5733,
-    "cost_usd_client": 0.003856,
+    "cache_hits": 85,
+    "cache_hit_rate": 0.5667,
+    "cost_usd_client": 0.003954,
     "cost_usd_wasted": 0.0,
     "outcomes": {
       "http_504": 3,
@@ -56,8 +56,8 @@
     "providers_used": {
       "mock_primary": 147
     },
-    "throughput_rps": 8.83,
-    "cost_usd_server": 0.003856
+    "throughput_rps": 8.76,
+    "cost_usd_server": 0.003954
   },
   "gateway_config": {
     "reliability": {
@@ -91,7 +91,8 @@
         "min_calls": 8,
         "failure_ratio": 0.5,
         "cooldown_s": 4.0,
-        "half_open_max_calls": 2
+        "half_open_max_calls": 2,
+        "retry_after_is_backpressure": true
       },
       "fallback": {
         "enabled": false,
@@ -209,7 +210,7 @@
         "state": "open",
         "window_calls": 2,
         "failure_ratio": 1.0,
-        "cooldown_remaining_s": 3.229,
+        "cooldown_remaining_s": 3.045,
         "opened_count": 1,
         "short_circuited": 0
       },
@@ -239,7 +240,7 @@
         "provider": "mock_primary",
         "limit": 16,
         "in_flight": 0,
-        "admitted": 78,
+        "admitted": 79,
         "queued": 0,
         "shed": 0,
         "peak_in_flight": 15,
@@ -282,17 +283,17 @@
       "enabled": true,
       "embedder": "hashing",
       "lookups": 150,
-      "hits": 86,
-      "stores": 61,
+      "hits": 85,
+      "stores": 62,
       "errors": 0,
-      "hit_rate": 0.5733
+      "hit_rate": 0.5667
     },
     "budget": {
       "period": "day",
-      "period_start": "2026-08-12T00:00:00+00:00",
+      "period_start": "2026-08-14T00:00:00+00:00",
       "limit_usd": 25.0,
-      "spent_usd": 2.602087,
-      "remaining_usd": 22.397913,
+      "spent_usd": 0.524451,
+      "remaining_usd": 24.475549,
       "per_key": {}
     },
     "recorder": {
@@ -308,12 +309,12 @@
       {
         "upstream": "primary",
         "profile": "hang",
-        "served": 78,
+        "served": 79,
         "deck_size": 100,
-        "cursor": 78,
+        "cursor": 79,
         "counts": {
           "hang": 17,
-          "ok": 61
+          "ok": 62
         },
         "max_concurrency": 0,
         "peak_in_flight": 20,

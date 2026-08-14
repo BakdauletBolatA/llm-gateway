@@ -13,6 +13,7 @@ reliability:
     enabled: true
   circuit_breaker:
     enabled: true
+    retry_after_is_backpressure: false
     window_s: 10.0
     min_calls: 8
     failure_ratio: 0.5

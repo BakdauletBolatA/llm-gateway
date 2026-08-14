@@ -3,8 +3,8 @@
   "scenario": "hang",
   "route": "chaos-default",
   "note": "выключен семантический кэш",
-  "started_at": "2026-08-12T22:34:06.272396+00:00",
-  "duration_s": 1.92,
+  "started_at": "2026-08-14T05:57:00.277012+00:00",
+  "duration_s": 2.0,
   "concurrency": 15,
   "client_timeout_s": 20.0,
   "workload": {
@@ -21,20 +21,20 @@
     "failures": 0,
     "success_rate": 1.0,
     "latency_ms": {
-      "p50": 98.4,
-      "p95": 507.7,
-      "p99": 524.4,
-      "mean": 167.6,
-      "max": 525.4,
-      "min": 45.1
+      "p50": 102.3,
+      "p95": 513.6,
+      "p99": 530.1,
+      "mean": 172.5,
+      "max": 534.1,
+      "min": 50.9
     },
     "latency_ms_success_only": {
-      "p50": 98.4,
-      "p95": 507.7,
-      "p99": 524.4,
-      "mean": 167.6,
-      "max": 525.4,
-      "min": 45.1
+      "p50": 102.3,
+      "p95": 513.6,
+      "p99": 530.1,
+      "mean": 172.5,
+      "max": 534.1,
+      "min": 50.9
     },
     "attempts_total": 179,
     "retries_total": 0,
@@ -44,7 +44,7 @@
     "hedged_requests": 29,
     "cache_hits": 0,
     "cache_hit_rate": 0.0,
-    "cost_usd_client": 0.022841,
+    "cost_usd_client": 0.02284,
     "cost_usd_wasted": 0.0,
     "outcomes": {
       "success": 150
@@ -54,8 +54,8 @@
       "mock_primary": 121,
       "mock_secondary": 29
     },
-    "throughput_rps": 77.96,
-    "cost_usd_server": 0.022841
+    "throughput_rps": 75.11,
+    "cost_usd_server": 0.02284
   },
   "gateway_config": {
     "reliability": {
@@ -89,7 +89,8 @@
         "min_calls": 8,
         "failure_ratio": 0.5,
         "cooldown_s": 4.0,
-        "half_open_max_calls": 2
+        "half_open_max_calls": 2,
+        "retry_after_is_backpressure": true
       },
       "fallback": {
         "enabled": true,
@@ -270,7 +271,7 @@
       "burst": 400,
       "scopes": {
         "__global__": {
-          "tokens": 398.02,
+          "tokens": 398.64,
           "allowed": 150,
           "throttled": 0
         }
@@ -287,10 +288,10 @@
     },
     "budget": {
       "period": "day",
-      "period_start": "2026-08-12T00:00:00+00:00",
+      "period_start": "2026-08-14T00:00:00+00:00",
       "limit_usd": 25.0,
-      "spent_usd": 2.960337,
-      "remaining_usd": 22.039663,
+      "spent_usd": 0.918646,
+      "remaining_usd": 24.081354,
       "per_key": {}
     },
     "recorder": {

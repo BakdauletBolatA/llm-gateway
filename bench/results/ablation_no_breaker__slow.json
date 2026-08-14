@@ -3,8 +3,8 @@
   "scenario": "slow",
   "route": "chaos-default",
   "note": "выключен circuit breaker",
-  "started_at": "2026-08-12T22:31:05.799945+00:00",
-  "duration_s": 2.58,
+  "started_at": "2026-08-14T05:53:09.478427+00:00",
+  "duration_s": 2.79,
   "concurrency": 15,
   "client_timeout_s": 20.0,
   "workload": {
@@ -21,20 +21,20 @@
     "failures": 0,
     "success_rate": 1.0,
     "latency_ms": {
-      "p50": 37.4,
-      "p95": 569.7,
-      "p99": 594.9,
-      "mean": 231.2,
-      "max": 603.2,
-      "min": 5.6
+      "p50": 49.2,
+      "p95": 605.0,
+      "p99": 638.8,
+      "mean": 250.1,
+      "max": 643.7,
+      "min": 6.9
     },
     "latency_ms_success_only": {
-      "p50": 37.4,
-      "p95": 569.7,
-      "p99": 594.9,
-      "mean": 231.2,
-      "max": 603.2,
-      "min": 5.6
+      "p50": 49.2,
+      "p95": 605.0,
+      "p99": 638.8,
+      "mean": 250.1,
+      "max": 643.7,
+      "min": 6.9
     },
     "attempts_total": 126,
     "retries_total": 0,
@@ -44,7 +44,7 @@
     "hedged_requests": 63,
     "cache_hits": 87,
     "cache_hit_rate": 0.58,
-    "cost_usd_client": 0.032356,
+    "cost_usd_client": 0.032358,
     "cost_usd_wasted": 0.0,
     "outcomes": {
       "success": 150
@@ -53,8 +53,8 @@
     "providers_used": {
       "mock_secondary": 150
     },
-    "throughput_rps": 58.1,
-    "cost_usd_server": 0.032356
+    "throughput_rps": 53.72,
+    "cost_usd_server": 0.032358
   },
   "gateway_config": {
     "reliability": {
@@ -88,7 +88,8 @@
         "min_calls": 8,
         "failure_ratio": 0.5,
         "cooldown_s": 4.0,
-        "half_open_max_calls": 2
+        "half_open_max_calls": 2,
+        "retry_after_is_backpressure": true
       },
       "fallback": {
         "enabled": true,
@@ -286,10 +287,10 @@
     },
     "budget": {
       "period": "day",
-      "period_start": "2026-08-12T00:00:00+00:00",
+      "period_start": "2026-08-14T00:00:00+00:00",
       "limit_usd": 25.0,
-      "spent_usd": 2.597874,
-      "remaining_usd": 22.402126,
+      "spent_usd": 0.506659,
+      "remaining_usd": 24.493341,
       "per_key": {}
     },
     "recorder": {
@@ -312,7 +313,7 @@
           "ok": 63
         },
         "max_concurrency": 0,
-        "peak_in_flight": 58,
+        "peak_in_flight": 56,
         "rejected_overload": 0
       },
       {

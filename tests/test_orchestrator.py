@@ -304,6 +304,9 @@ def breaker_settings(**overrides: Any) -> Settings:
             "failure_ratio": 0.5,
             "cooldown_s": 60.0,
             "half_open_max_calls": 1,
+            # Pinned like every other flag: these tests must keep their meaning when
+            # the shipped config turns something on.
+            "retry_after_is_backpressure": False,
             **overrides,
         },
     )
@@ -621,3 +624,59 @@ async def test_a_hedge_is_not_launched_when_there_is_no_time_left_for_it() -> No
     with pytest.raises(DeadlineExceeded):
         await orchestrator.execute(REQUEST, route_name="chaos-default")
     assert spare.calls == [], "the deadline arrived before the hedge delay did"
+
+
+# -- backpressure vs failure --------------------------------------------------
+
+
+async def test_without_the_backpressure_rule_a_429_opens_the_breaker() -> None:
+    """How the breaker behaved through iteration 8, and still does when the flag is off."""
+    adapter = StubAdapter(
+        "mock_primary", script=[provider_error(ErrorKind.RATE_LIMITED, retry_after_s=1.0)] * 20
+    )
+    settings = breaker_settings(min_calls=3)
+    orchestrator, _ = build(settings, {"mock_primary": adapter})
+
+    for _ in range(3):
+        with pytest.raises(ProviderError):
+            await orchestrator.execute(REQUEST, route_name="chaos-default")
+
+    with pytest.raises(ProviderError) as excinfo:
+        await orchestrator.execute(REQUEST, route_name="chaos-default")
+    assert excinfo.value.kind is ErrorKind.CIRCUIT_OPEN
+
+
+async def test_a_provider_asking_us_to_wait_is_not_counted_as_broken() -> None:
+    """`Retry-After` is the provider saying "alive, come back later".
+
+    Opening the breaker on it means refusing a provider that would have served the
+    very next request — measured on the `capacity_limited` scenario in RELIABILITY.md.
+    """
+    adapter = StubAdapter(
+        "mock_primary", script=[provider_error(ErrorKind.RATE_LIMITED, retry_after_s=1.0)] * 20
+    )
+    settings = breaker_settings(min_calls=3, retry_after_is_backpressure=True)
+    orchestrator, _ = build(settings, {"mock_primary": adapter})
+
+    for _ in range(6):
+        with pytest.raises(ProviderError) as excinfo:
+            await orchestrator.execute(REQUEST, route_name="chaos-default")
+        assert excinfo.value.kind is ErrorKind.RATE_LIMITED, "never short-circuited"
+
+    assert len(adapter.calls) == 6, "every request still reached the provider"
+    assert orchestrator.breakers.get("mock_primary").snapshot()["window_calls"] == 0
+
+
+async def test_backpressure_handling_does_not_excuse_a_plain_500() -> None:
+    """The exemption is for Retry-After, not for 5xx in general."""
+    adapter = StubAdapter("mock_primary", script=[provider_error(ErrorKind.SERVER_ERROR)] * 20)
+    settings = breaker_settings(min_calls=3, retry_after_is_backpressure=True)
+    orchestrator, _ = build(settings, {"mock_primary": adapter})
+
+    for _ in range(3):
+        with pytest.raises(ProviderError):
+            await orchestrator.execute(REQUEST, route_name="chaos-default")
+
+    with pytest.raises(ProviderError) as excinfo:
+        await orchestrator.execute(REQUEST, route_name="chaos-default")
+    assert excinfo.value.kind is ErrorKind.CIRCUIT_OPEN

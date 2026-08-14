@@ -3,8 +3,8 @@
   "scenario": "hang",
   "route": "chaos-default",
   "note": "выключено хеджирование",
-  "started_at": "2026-08-12T22:32:16.065333+00:00",
-  "duration_s": 16.94,
+  "started_at": "2026-08-14T05:54:39.449537+00:00",
+  "duration_s": 17.41,
   "concurrency": 15,
   "client_timeout_s": 20.0,
   "workload": {
@@ -17,47 +17,47 @@
   },
   "results": {
     "requests": 150,
-    "successes": 147,
-    "failures": 3,
-    "success_rate": 0.98,
+    "successes": 146,
+    "failures": 4,
+    "success_rate": 0.9733,
     "latency_ms": {
-      "p50": 33.4,
-      "p95": 8186.4,
-      "p99": 16064.9,
-      "mean": 972.2,
-      "max": 16084.0,
-      "min": 6.1
+      "p50": 70.8,
+      "p95": 8185.6,
+      "p99": 16117.8,
+      "mean": 946.0,
+      "max": 16165.9,
+      "min": 8.2
     },
     "latency_ms_success_only": {
-      "p50": 30.1,
-      "p95": 8141.0,
-      "p99": 8246.8,
-      "mean": 664.2,
-      "max": 8262.1,
-      "min": 6.1
+      "p50": 61.7,
+      "p95": 8097.6,
+      "p99": 8310.1,
+      "mean": 530.1,
+      "max": 8329.3,
+      "min": 8.2
     },
-    "attempts_total": 78,
-    "retries_total": 14,
-    "fallbacks_total": 3,
+    "attempts_total": 73,
+    "retries_total": 12,
+    "fallbacks_total": 4,
     "breaker_skips_total": 0,
     "hedges_total": 0,
     "hedged_requests": 0,
-    "cache_hits": 86,
-    "cache_hit_rate": 0.5733,
-    "cost_usd_client": 0.003858,
+    "cache_hits": 89,
+    "cache_hit_rate": 0.5933,
+    "cost_usd_client": 0.003649,
     "cost_usd_wasted": 0.0,
     "outcomes": {
-      "http_504": 3,
-      "success": 147
+      "http_504": 4,
+      "success": 146
     },
     "error_kinds": {
-      "deadline_exceeded": 3
+      "deadline_exceeded": 4
     },
     "providers_used": {
-      "mock_primary": 147
+      "mock_primary": 146
     },
-    "throughput_rps": 8.86,
-    "cost_usd_server": 0.003858
+    "throughput_rps": 8.62,
+    "cost_usd_server": 0.003649
   },
   "gateway_config": {
     "reliability": {
@@ -91,7 +91,8 @@
         "min_calls": 8,
         "failure_ratio": 0.5,
         "cooldown_s": 4.0,
-        "half_open_max_calls": 2
+        "half_open_max_calls": 2,
+        "retry_after_is_backpressure": true
       },
       "fallback": {
         "enabled": true,
@@ -207,9 +208,9 @@
         "provider": "mock_primary",
         "enabled": true,
         "state": "open",
-        "window_calls": 2,
+        "window_calls": 3,
         "failure_ratio": 1.0,
-        "cooldown_remaining_s": 3.263,
+        "cooldown_remaining_s": 2.69,
         "opened_count": 1,
         "short_circuited": 0
       },
@@ -239,7 +240,7 @@
         "provider": "mock_primary",
         "limit": 16,
         "in_flight": 0,
-        "admitted": 78,
+        "admitted": 73,
         "queued": 0,
         "shed": 0,
         "peak_in_flight": 15,
@@ -272,7 +273,7 @@
       "burst": 400,
       "scopes": {
         "__global__": {
-          "tokens": 399.0,
+          "tokens": 398.82,
           "allowed": 150,
           "throttled": 0
         }
@@ -282,17 +283,17 @@
       "enabled": true,
       "embedder": "hashing",
       "lookups": 150,
-      "hits": 86,
-      "stores": 61,
+      "hits": 89,
+      "stores": 57,
       "errors": 0,
-      "hit_rate": 0.5733
+      "hit_rate": 0.5933
     },
     "budget": {
       "period": "day",
-      "period_start": "2026-08-12T00:00:00+00:00",
+      "period_start": "2026-08-14T00:00:00+00:00",
       "limit_usd": 25.0,
-      "spent_usd": 2.639026,
-      "remaining_usd": 22.360974,
+      "spent_usd": 0.563587,
+      "remaining_usd": 24.436413,
       "per_key": {}
     },
     "recorder": {
@@ -308,15 +309,15 @@
       {
         "upstream": "primary",
         "profile": "hang",
-        "served": 78,
+        "served": 73,
         "deck_size": 100,
-        "cursor": 78,
+        "cursor": 73,
         "counts": {
-          "hang": 17,
-          "ok": 61
+          "hang": 16,
+          "ok": 57
         },
         "max_concurrency": 0,
-        "peak_in_flight": 19,
+        "peak_in_flight": 18,
         "rejected_overload": 0
       },
       {

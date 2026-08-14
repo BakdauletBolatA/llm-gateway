@@ -1,0 +1,36 @@
+# Итерация 9 — брейкер перестаёт считать backpressure за отказ.
+#
+# Итерация 8 вскрыла: провайдер, который просто полон, для брейкера неотличим от
+# сломанного, и стек надёжности начинает работать против нас. Лечили это извне —
+# лимитом конкурентности. Здесь лечим причину.
+#
+# Разделяющий признак — не код ответа, а заголовок Retry-After: провайдер явно
+# сказал «я жив, приди через N секунд». Такой ответ вообще не попадает в окно
+# брейкера: он ничего не сообщает о здоровье провайдера, только о его занятости.
+# Обычные 500/502/timeout считаются отказами как раньше.
+reliability:
+  timeouts:
+    enabled: true
+  retries:
+    enabled: true
+  circuit_breaker:
+    enabled: true
+    retry_after_is_backpressure: true
+  fallback:
+    enabled: true
+    max_providers: 3
+  hedging:
+    enabled: true
+    delay_ms: 400
+    max_in_flight: 2
+  bulkhead:
+    enabled: true
+    max_concurrent_per_provider: 16
+    queue_timeout_ms: 2000
+  rate_limit:
+    enabled: true
+    requests_per_second: 200
+    burst: 400
+  cache:
+    enabled: true
+    similarity_threshold: 0.60
