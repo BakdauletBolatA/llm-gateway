@@ -42,6 +42,12 @@ fallback-цепочка в шлюзе реально пересекает гра
 
 ```bash
 docker compose up -d --build                       # postgres + mock + gateway
+scripts/reproduce_report.sh                        # ВСЕ числа этого отчёта, ~20 мин
+```
+
+Или по частям — прогон отдельного сценария и пересборка таблиц:
+
+```bash
 python -m chaos.run --label 01_baseline --all      # прогон всех сценариев
 python -m chaos.report                             # пересобрать таблицы ниже
 ```

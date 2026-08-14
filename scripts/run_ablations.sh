@@ -13,6 +13,7 @@ cd "$ROOT"
 
 N="${N:-150}"
 CONCURRENCY="${CONCURRENCY:-15}"
+OUT="${OUT:-bench/results}"
 SCENARIOS="${SCENARIOS:-storm hang primary_outage}"
 
 declare -a ABLATIONS=(
@@ -43,7 +44,7 @@ for entry in "${ABLATIONS[@]}"; do
   .venv/bin/python -m chaos.run \
     --label "ablation_${name}" \
     "${scenario_args[@]}" \
-    --n "$N" --concurrency "$CONCURRENCY" \
+    --n "$N" --concurrency "$CONCURRENCY" --out "$OUT" \
     --note "$note"
 done
 

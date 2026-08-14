@@ -139,7 +139,8 @@ src/chaos/           хаос-харнесс и генератор таблиц 
 config/              gateway.yaml, failure_profiles.yaml, оверлеи итераций и ablation
 bench/results/       результаты всех прогонов (JSON), из них собран RELIABILITY.md
 migrations/          Alembic; применяются автоматически при старте шлюза
-scripts/             стенд без Docker, ablation, CI-смоук, калибровка порога кэша
+scripts/             стенд без Docker, воспроизведение отчёта, ablation, CI-смоук
+ops/                 дашборд Grafana под метрики шлюза
 ```
 
 ---
@@ -221,11 +222,17 @@ curl -s localhost:8080/metrics | grep -E '^llm_gateway_(requests|provider_calls|
 ## Хаос-тесты
 
 ```bash
+scripts/reproduce_report.sh                        # весь отчёт с нуля, ~20 мин
+ONLY=09 scripts/reproduce_report.sh                # перепрогнать одну итерацию
 python -m chaos.run --label my_run --all           # все 11 сценариев
 python -m chaos.run --label my_run --scenario storm --n 300 --concurrency 20
 python -m chaos.report                             # пересобрать таблицы в RELIABILITY.md
 scripts/run_ablations.sh                           # выключить по одному механизму
 ```
+
+`reproduce_report.sh` перезаписывает `bench/results` — в этом и смысл. Чтобы
+проверить сам скрипт, не трогая замеры:
+`OUT=/tmp/probe N=10 SETTLE=0 scripts/reproduce_report.sh`.
 
 Профили отказов и сценарии задаются в `config/failure_profiles.yaml` — код мока
 знает только *как* ломаться, но не *когда*. Инъекция детерминирована: колода

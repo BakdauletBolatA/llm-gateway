@@ -67,6 +67,10 @@ report: ## Пересобрать таблицы в RELIABILITY.md из bench/re
 smoke-ollama: ## Проверить, что живой провайдер Ollama отвечает через шлюз
 	./scripts/smoke_ollama.sh
 
+.PHONY: reproduce
+reproduce: ## Пересобрать весь отчёт с нуля (все итерации, ablation, extras) — ~20 мин
+	./scripts/reproduce_report.sh
+
 .PHONY: ablations
 ablations: ## Ablation-прогоны: выключить по одному механизму из финальной сборки
 	./scripts/run_ablations.sh
