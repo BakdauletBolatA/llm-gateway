@@ -86,7 +86,7 @@ async def build_state(settings: Settings) -> AppState:
         registry.enabled_providers(),
         {name: provider.max_concurrent for name, provider in settings.providers.items()},
     )
-    limiter = RateLimiter(settings.reliability.rate_limit)
+    limiter = RateLimiter(settings.reliability.rate_limit, database)
     embedder, embed_client = _build_embedder(settings)
     cache = SemanticCache(settings.reliability.cache, embedder, database)
     budget = BudgetTracker(settings.budget, settings.auth, database)
@@ -245,7 +245,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
         # Admission control comes first, before the cache and before the route is
         # even resolved: the point of a rate limit is to refuse work cheaply.
-        retry_after_s = state.limiter.check(api_key_id)
+        retry_after_s = await state.limiter.check(api_key_id)
         if retry_after_s is not None:
             error: GatewayError = ThrottledError(
                 f"rate limit of {state.settings.reliability.rate_limit.requests_per_second}"

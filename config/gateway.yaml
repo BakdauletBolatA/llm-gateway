@@ -119,6 +119,10 @@ reliability:
     enabled: true
     requests_per_second: 200
     burst: 400
+    # local — счётчик в памяти процесса. Реплик больше одной? Тогда shared: иначе
+    # каждая выдаст полный лимит, и деплоймент пропустит N лимитов вместо одного
+    # (замер на двух репликах: 100 запросов против 59 — см. RELIABILITY.md).
+    scope: ${RATE_LIMIT_SCOPE:-local}
 
   cache:
     enabled: true

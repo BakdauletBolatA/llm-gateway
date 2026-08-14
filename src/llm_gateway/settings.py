@@ -113,6 +113,10 @@ class RateLimitConfig(BaseModel):
     enabled: bool = False
     requests_per_second: float = Field(default=50.0, gt=0.0)
     burst: int = Field(default=100, ge=1)
+    #: local — счётчик в памяти процесса: точный, бесплатный и по-репличный, то есть
+    #: N реплик пропустят N лимитов. shared — одна строка на scope в Postgres,
+    #: лимит принадлежит деплойменту, а не процессу. Замер разницы — итерация 10.
+    scope: Literal["local", "shared"] = "local"
 
 
 class CacheConfig(BaseModel):

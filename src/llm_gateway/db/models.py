@@ -14,6 +14,7 @@ from sqlalchemy import (
     BigInteger,
     Boolean,
     DateTime,
+    Float,
     Index,
     Integer,
     Numeric,
@@ -89,6 +90,23 @@ class LlmAttempt(Base):
     tokens_in: Mapped[int] = mapped_column(Integer, default=0)
     tokens_out: Mapped[int] = mapped_column(Integer, default=0)
     cost_usd: Mapped[float] = mapped_column(Numeric(14, 6), default=0)
+
+
+class RateLimitBucket(Base):
+    """Token bucket shared by every replica (`rate_limit.scope: shared`).
+
+    Taken with a single atomic statement — see reliability/ratelimit.py — so the
+    row lock, not the application, is what keeps two replicas from spending the
+    same token twice.
+    """
+
+    __tablename__ = "rate_limit_buckets"
+
+    scope: Mapped[str] = mapped_column(String(128), primary_key=True)
+    tokens: Mapped[float] = mapped_column(Float)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
 
 class SemanticCacheEntry(Base):

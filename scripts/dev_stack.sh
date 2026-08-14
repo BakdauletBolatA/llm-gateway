@@ -6,7 +6,7 @@
 #     -e POSTGRES_DB=llm_gateway pgvector/pgvector:pg16
 # or a local server with postgresql-16-pgvector installed.
 #
-# Usage: scripts/dev_stack.sh {up|down|status|logs}
+# Usage: scripts/dev_stack.sh {up|up-gateway|down|status|logs}
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -70,6 +70,13 @@ wait_for() {
 }
 
 case "${1:-up}" in
+  up-gateway)
+    # Только шлюз: вторая реплика для экспериментов с общим счётчиком.
+    #   RUN_DIR=.run/replica-b GATEWAY_PORT=8082 scripts/dev_stack.sh up-gateway
+    start_one gateway "llm_gateway.main:create_app" "$GATEWAY_PORT"
+    wait_for "http://127.0.0.1:$GATEWAY_PORT/healthz" gateway
+    echo "gateway replica on :$GATEWAY_PORT (RUN_DIR=$RUN_DIR)"
+    ;;
   up)
     start_one mock "mock_provider.main:create_app" "$MOCK_PORT"
     start_one gateway "llm_gateway.main:create_app" "$GATEWAY_PORT"
@@ -95,7 +102,7 @@ case "${1:-up}" in
     tail -n 50 "$RUN_DIR"/*.log
     ;;
   *)
-    echo "usage: $0 {up|down|status|logs}" >&2
+    echo "usage: $0 {up|up-gateway|down|status|logs}" >&2
     exit 2
     ;;
 esac
