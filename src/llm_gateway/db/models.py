@@ -104,9 +104,7 @@ class RateLimitBucket(Base):
 
     scope: Mapped[str] = mapped_column(String(128), primary_key=True)
     tokens: Mapped[float] = mapped_column(Float)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class SemanticCacheEntry(Base):

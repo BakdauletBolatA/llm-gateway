@@ -2,7 +2,11 @@
 
 One place composes every reliability mechanism, in this order:
 
-    semantic cache -> budget -> [ per provider in chain: breaker -> retries -> call ]
+    semantic cache -> budget -> per provider in the chain:
+        circuit breaker -> concurrency slot -> retries -> call
+
+(The rate limit sits one layer up, in the HTTP handler: it refuses before any of
+this happens, including before the cache lookup.)
 
 The chain is walked one provider at a time, or — with hedging on — the next
 provider is launched in parallel after a delay and the first answer wins.
