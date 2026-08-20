@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from llm_gateway.errors import ErrorKind
 
@@ -22,7 +22,19 @@ ENV_PREFIX = "GW__"
 _ENV_REF = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}")
 
 
-class TimeoutConfig(BaseModel):
+class ConfigModel(BaseModel):
+    """Base for every config section: unknown keys are an error, not a shrug.
+
+    Pydantic ignores extra keys by default, which for this project is the worst
+    possible behaviour: a typo in an iteration overlay (`hedgin:` for `hedging:`)
+    would load fine and quietly measure a different configuration than the file
+    claims, and the report would attribute the result to the wrong build.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class TimeoutConfig(ConfigModel):
     enabled: bool = False
     connect_s: float = 2.0
     read_s: float = 8.0
@@ -30,7 +42,7 @@ class TimeoutConfig(BaseModel):
     total_s: float = 12.0
 
 
-class RetryConfig(BaseModel):
+class RetryConfig(ConfigModel):
     enabled: bool = False
     max_attempts: int = Field(default=3, ge=1)
     base_delay_ms: int = Field(default=120, ge=0)
@@ -54,7 +66,7 @@ class RetryConfig(BaseModel):
         return frozenset(self.retry_on)
 
 
-class CircuitBreakerConfig(BaseModel):
+class CircuitBreakerConfig(ConfigModel):
     enabled: bool = False
     window_s: float = 10.0
     min_calls: int = Field(default=8, ge=1)
@@ -67,12 +79,12 @@ class CircuitBreakerConfig(BaseModel):
     retry_after_is_backpressure: bool = False
 
 
-class FallbackConfig(BaseModel):
+class FallbackConfig(ConfigModel):
     enabled: bool = False
     max_providers: int = Field(default=3, ge=1)
 
 
-class HedgingConfig(BaseModel):
+class HedgingConfig(ConfigModel):
     """Tail-latency hedging: race the next provider instead of waiting it out.
 
     Retries help when a provider *fails*; they do nothing when it answers, slowly.
@@ -90,7 +102,7 @@ class HedgingConfig(BaseModel):
         return self.delay_ms / 1000.0
 
 
-class BulkheadConfig(BaseModel):
+class BulkheadConfig(ConfigModel):
     """Limit on calls in flight to one provider.
 
     The breaker watches for a provider that fails; this watches for one that is
@@ -107,7 +119,7 @@ class BulkheadConfig(BaseModel):
         return self.queue_timeout_ms / 1000.0
 
 
-class RateLimitConfig(BaseModel):
+class RateLimitConfig(ConfigModel):
     """Token bucket per API key, or one shared bucket when auth is off."""
 
     enabled: bool = False
@@ -119,7 +131,7 @@ class RateLimitConfig(BaseModel):
     scope: Literal["local", "shared"] = "local"
 
 
-class CacheConfig(BaseModel):
+class CacheConfig(ConfigModel):
     enabled: bool = False
     similarity_threshold: float = Field(default=0.93, gt=0.0, le=1.0)
     ttl_s: int = Field(default=900, ge=1)
@@ -130,7 +142,7 @@ class CacheConfig(BaseModel):
     ollama_embed_model: str = "nomic-embed-text"
 
 
-class ReliabilityConfig(BaseModel):
+class ReliabilityConfig(ConfigModel):
     timeouts: TimeoutConfig = Field(default_factory=TimeoutConfig)
     retries: RetryConfig = Field(default_factory=RetryConfig)
     circuit_breaker: CircuitBreakerConfig = Field(default_factory=CircuitBreakerConfig)
@@ -170,7 +182,7 @@ class ReliabilityConfig(BaseModel):
         }
 
 
-class ProviderConfig(BaseModel):
+class ProviderConfig(ConfigModel):
     type: Literal["openai", "anthropic", "ollama"]
     base_url: str
     api_key_env: str | None = None
@@ -185,16 +197,16 @@ class ProviderConfig(BaseModel):
         return os.environ.get(self.api_key_env) if self.api_key_env else None
 
 
-class RouteTarget(BaseModel):
+class RouteTarget(ConfigModel):
     provider: str
     model: str
 
 
-class RouteConfig(BaseModel):
+class RouteConfig(ConfigModel):
     chain: list[RouteTarget] = Field(min_length=1)
 
 
-class RoutesConfig(BaseModel):
+class RoutesConfig(ConfigModel):
     default: str
     definitions: dict[str, RouteConfig]
 
@@ -205,12 +217,12 @@ class RoutesConfig(BaseModel):
         return self
 
 
-class ModelPrice(BaseModel):
+class ModelPrice(ConfigModel):
     input_per_mtok: float = 0.0
     output_per_mtok: float = 0.0
 
 
-class PricingConfig(BaseModel):
+class PricingConfig(ConfigModel):
     default: ModelPrice = Field(default_factory=ModelPrice)
     models: dict[str, ModelPrice] = Field(default_factory=dict)
 
@@ -218,13 +230,13 @@ class PricingConfig(BaseModel):
         return self.models.get(f"{provider}:{model}") or self.models.get(model) or self.default
 
 
-class ApiKeyConfig(BaseModel):
+class ApiKeyConfig(ConfigModel):
     id: str
     key: str
     budget_limit_usd: float | None = None
 
 
-class AuthConfig(BaseModel):
+class AuthConfig(ConfigModel):
     keys: list[ApiKeyConfig] = Field(default_factory=list)
 
     @property
@@ -235,7 +247,7 @@ class AuthConfig(BaseModel):
         return next((k for k in self.keys if k.key and k.key == presented), None)
 
 
-class BudgetConfig(BaseModel):
+class BudgetConfig(ConfigModel):
     enabled: bool = True
     period: Literal["day", "month"] = "day"
     limit_usd: float = Field(default=25.0, ge=0.0)
@@ -243,7 +255,7 @@ class BudgetConfig(BaseModel):
     estimate_output_tokens: int = 512
 
 
-class DatabaseConfig(BaseModel):
+class DatabaseConfig(ConfigModel):
     dsn: str
     pool_size: int = 10
     max_overflow: int = 10
@@ -253,7 +265,7 @@ class DatabaseConfig(BaseModel):
     run_migrations_on_startup: bool = True
 
 
-class AppConfig(BaseModel):
+class AppConfig(ConfigModel):
     name: str = "llm-gateway"
     log_level: str = "INFO"
     #: json — по одной строке-объекту на запись, для сбора логов; text — для человека.
@@ -261,7 +273,7 @@ class AppConfig(BaseModel):
     slow_request_ms: int = 5000
 
 
-class Settings(BaseModel):
+class Settings(ConfigModel):
     app: AppConfig = Field(default_factory=AppConfig)
     database: DatabaseConfig
     auth: AuthConfig = Field(default_factory=AuthConfig)
