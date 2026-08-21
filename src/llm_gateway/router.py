@@ -296,67 +296,76 @@ class Orchestrator:
                     provider_latency_ms=int((time.monotonic() - started) * 1000),
                 )
 
-        # 2. Budget. A refusal before spending, not an invoice afterwards.
+        # 2. Budget. A refusal before spending, not an invoice afterwards. In shared
+        # mode the estimate is committed in Postgres here and corrected below, so a
+        # second replica cannot spend the same dollar while this request is in flight.
         await self.budget.refresh()
         estimate = self._estimate_cost(request, chain[0].provider, chain[0].model)
-        self.budget.check(estimate, api_key_id)
+        reservation = await self.budget.reserve(estimate, api_key_id)
+        spent = 0.0
+        try:
+            # 3. Provider chain, sequentially or with the next provider raced in.
+            progress = _RequestProgress()
+            hedging = self.settings.reliability.hedging
+            if hedging.enabled and len(chain) > 1:
+                decisive = await self._walk_hedged(request, chain, deadline, progress)
+            else:
+                decisive = await self._walk_chain(request, chain, deadline, progress)
 
-        # 3. Provider chain, sequentially or with the next provider raced in.
-        progress = _RequestProgress()
-        hedging = self.settings.reliability.hedging
-        if hedging.enabled and len(chain) > 1:
-            decisive = await self._walk_hedged(request, chain, deadline, progress)
-        else:
-            decisive = await self._walk_chain(request, chain, deadline, progress)
+            # A hedge can produce a second answer that arrived too late to be used. The
+            # upstream still did the work, so it is billed and logged as "discarded" —
+            # otherwise the report would understate what hedging costs.
+            wasted = 0.0
+            for extra in progress.discarded:
+                wasted += extra.cost_usd
+                if extra.progress.records:
+                    extra.progress.records[-1].outcome = "discarded"
 
-        # A hedge can produce a second answer that arrived too late to be used. The
-        # upstream still did the work, so it is billed and logged as "discarded" —
-        # otherwise the report would understate what hedging costs.
-        wasted = 0.0
-        for extra in progress.discarded:
-            wasted += extra.cost_usd
-            if extra.progress.records:
-                extra.progress.records[-1].outcome = "discarded"
-            self.budget.record_spend(extra.cost_usd, api_key_id)
+            spent = wasted
 
-        response = decisive.response
-        if response is None:
-            raise progress.apply_to(
-                decisive.error
-                or NoProviderAvailableError("no provider in the chain accepted the request")
-            )
-        hop = decisive.hop
-        self.budget.record_spend(decisive.cost_usd, api_key_id)
+            response = decisive.response
+            if response is None:
+                raise progress.apply_to(
+                    decisive.error
+                    or NoProviderAvailableError("no provider in the chain accepted the request")
+                )
+            hop = decisive.hop
+            spent += decisive.cost_usd
 
-        if cacheable:
-            self.cache.store_later(
-                scope=scope,
-                prompt=prompt,
-                response_text=response.text,
+            if cacheable:
+                self.cache.store_later(
+                    scope=scope,
+                    prompt=prompt,
+                    response_text=response.text,
+                    provider=hop.provider,
+                    model=hop.model,
+                    tokens_in=response.tokens_in,
+                    tokens_out=response.tokens_out,
+                    cost_usd=decisive.cost_usd,
+                )
+
+            return ExecutionResult(
+                text=response.text,
                 provider=hop.provider,
                 model=hop.model,
                 tokens_in=response.tokens_in,
                 tokens_out=response.tokens_out,
-                cost_usd=decisive.cost_usd,
+                cost_usd=decisive.cost_usd + wasted,
+                wasted_cost_usd=wasted,
+                finish_reason=response.finish_reason,
+                attempts=progress.attempts,
+                retries=progress.retries,
+                fallbacks=progress.fallbacks,
+                breaker_skips=progress.breaker_skips,
+                hedges=progress.hedges,
+                provider_latency_ms=progress.provider_latency_ms,
+                attempt_records=progress.attempt_records(),
             )
-
-        return ExecutionResult(
-            text=response.text,
-            provider=hop.provider,
-            model=hop.model,
-            tokens_in=response.tokens_in,
-            tokens_out=response.tokens_out,
-            cost_usd=decisive.cost_usd + wasted,
-            wasted_cost_usd=wasted,
-            finish_reason=response.finish_reason,
-            attempts=progress.attempts,
-            retries=progress.retries,
-            fallbacks=progress.fallbacks,
-            breaker_skips=progress.breaker_skips,
-            hedges=progress.hedges,
-            provider_latency_ms=progress.provider_latency_ms,
-            attempt_records=progress.attempt_records(),
-        )
+        finally:
+            # Settle to what the request really cost. A failed request spent nothing
+            # and gets its reservation back — otherwise one outage would eat the day's
+            # budget in refusals for money that was never billed.
+            await self.budget.settle(reservation, spent)
 
     # -- walking the chain -------------------------------------------------
 

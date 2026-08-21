@@ -253,6 +253,11 @@ class BudgetConfig(ConfigModel):
     limit_usd: float = Field(default=25.0, ge=0.0)
     refresh_interval_s: float = 5.0
     estimate_output_tokens: int = 512
+    #: local — счётчик в памяти процесса, сверяемый с Postgres раз в
+    #: refresh_interval_s: внутри этого окна N реплик потратят до N лимитов.
+    #: shared — резервирование в одной строке Postgres перед вызовом провайдера,
+    #: лимит принадлежит деплойменту. Замер разницы — итерация 11.
+    scope: Literal["local", "shared"] = "local"
 
 
 class DatabaseConfig(ConfigModel):

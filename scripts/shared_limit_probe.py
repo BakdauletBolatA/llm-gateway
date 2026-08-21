@@ -1,15 +1,18 @@
-"""How many requests two gateway replicas let through with a limit of X rps each.
+"""What two gateway replicas let through when each one holds the same limit.
 
-Answers one question: does the limit belong to the process or to the deployment?
-Load is dealt to the replicas in turn and only response codes are counted — the
-client's point of view, with no faith in the gateway's own counters.
+Answers one question, for both limits the gateway enforces: does the limit belong
+to the process or to the deployment? Load is dealt to the replicas in turn and
+response codes are counted from the client's side, with no faith in the gateway's
+own counters; the money actually recorded is read back from `/v1/usage` afterwards,
+which is the number the rate limit cannot fake.
 
     python scripts/shared_limit_probe.py \\
         --gateway http://127.0.0.1:8080 --gateway http://127.0.0.1:8082 \\
         --n 200 --concurrency 20
 
-Expected: with `rate_limit.scope: local` two replicas let through about twice the
-configured burst; with `shared`, exactly the configured burst between them.
+Expected with `scope: local` — the rate limit lets through about twice the
+configured burst, and the budget overspends by about a factor of the replica count.
+With `scope: shared` — one burst and one limit between them.
 """
 
 from __future__ import annotations
@@ -56,6 +59,39 @@ async def _fire(
         queue.task_done()
 
 
+async def _usage(gateway: str, refusals: int) -> dict[str, Any]:
+    """What the gateway itself recorded: cost from llm_calls, and the budget view.
+
+    Read from a single replica on purpose — the recorded spend is a property of the
+    period in the database, not of the process that happened to answer.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(30.0)) as client:
+            body = (await client.get(f"{gateway}/v1/usage")).json()
+    except Exception as exc:  # pragma: no cover - diagnostic script
+        return {"error": type(exc).__name__}
+    totals = body.get("totals", {})
+    budget = body.get("budget", {})
+    return {
+        "cost_usd_recorded": totals.get("cost_usd"),
+        "served_recorded": totals.get("successes"),
+        "budget_scope": budget.get("scope"),
+        "budget_limit_usd": budget.get("limit_usd"),
+        "budget_spent_usd": budget.get("spent_usd"),
+        # Overspend is measured against the money actually billed (the sum over
+        # llm_calls), not against the gateway's own budget counter: the counter is
+        # what is under test, so trusting it would beg the question. It is only
+        # reported when the budget was the binding constraint — a run that never
+        # saw a 402 was limited by something else, and "spent 0.02% of the limit"
+        # would read like a result instead of an accident of configuration.
+        "overspend_pct": (
+            round((totals["cost_usd"] / budget["limit_usd"] - 1) * 100, 1)
+            if refusals and budget.get("limit_usd") and totals.get("cost_usd") is not None
+            else None
+        ),
+    }
+
+
 async def main_async(args: argparse.Namespace) -> int:
     queues: list[asyncio.Queue[int]] = []
     share = args.n // len(args.gateway)
@@ -79,6 +115,7 @@ async def main_async(args: argparse.Namespace) -> int:
 
     served = tally.get("200", 0)
     throttled = tally.get("429", 0)
+    usage = await _usage(args.gateway[0], tally.get("402", 0))
     summary = {
         "gateways": args.gateway,
         "requests": sum(tally.values()),
@@ -88,7 +125,9 @@ async def main_async(args: argparse.Namespace) -> int:
         "duration_s": round(duration_s, 2),
         "offered_rps": round(sum(tally.values()) / duration_s, 1) if duration_s else 0.0,
         "served_rps": round(served / duration_s, 1) if duration_s else 0.0,
+        "refused_402": tally.get("402", 0),
         "per_gateway": dict(sorted(per_gateway.items())),
+        "usage": usage,
     }
     print(json.dumps(summary, indent=2, ensure_ascii=False))
     return 0
@@ -99,7 +138,19 @@ def main() -> int:
     parser.add_argument("--gateway", action="append", required=True, help="repeatable")
     parser.add_argument("--n", type=int, default=200, help="requests across all replicas")
     parser.add_argument("--concurrency", type=int, default=20, help="workers per replica")
-    return asyncio.run(main_async(parser.parse_args()))
+    parser.add_argument(
+        "--max-tokens",
+        type=int,
+        default=64,
+        help="max_tokens in the payload; 0 omits it, so the budget falls back to the "
+        "configured (deliberately conservative) estimate_output_tokens",
+    )
+    args = parser.parse_args()
+    if args.max_tokens:
+        PAYLOAD["max_tokens"] = args.max_tokens
+    else:
+        PAYLOAD.pop("max_tokens", None)
+    return asyncio.run(main_async(args))
 
 
 if __name__ == "__main__":

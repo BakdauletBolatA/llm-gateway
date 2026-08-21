@@ -1,0 +1,28 @@
+{
+  "gateways": [
+    "http://127.0.0.1:8080",
+    "http://127.0.0.1:8082"
+  ],
+  "requests": 600,
+  "served_200": 103,
+  "throttled_429": 497,
+  "other": {},
+  "duration_s": 1.32,
+  "offered_rps": 454.1,
+  "served_rps": 78.0,
+  "refused_402": 0,
+  "per_gateway": {
+    "http://127.0.0.1:8080 200": 52,
+    "http://127.0.0.1:8080 429": 248,
+    "http://127.0.0.1:8082 200": 51,
+    "http://127.0.0.1:8082 429": 249
+  },
+  "usage": {
+    "cost_usd_recorded": 0.006414,
+    "served_recorded": 103,
+    "budget_scope": "local",
+    "budget_limit_usd": 25.0,
+    "budget_spent_usd": 0.006414,
+    "overspend_pct": null
+  }
+}

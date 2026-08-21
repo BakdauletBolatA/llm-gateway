@@ -107,6 +107,21 @@ class RateLimitBucket(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class BudgetPeriod(Base):
+    """Money committed for one period, shared by every replica (`budget.scope: shared`).
+
+    Reserved before the call and settled after it — see budget.py. The row is the
+    deployment's counter, so the limit stops being per-process.
+    """
+
+    __tablename__ = "budget_periods"
+
+    period_key: Mapped[str] = mapped_column(String(32), primary_key=True)
+    scope: Mapped[str] = mapped_column(String(128), primary_key=True)
+    spent_usd: Mapped[float] = mapped_column(Float, default=0.0)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class SemanticCacheEntry(Base):
     __tablename__ = "semantic_cache"
 

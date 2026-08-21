@@ -17,6 +17,7 @@ from typing import Any
 import httpx
 import pytest
 
+from llm_gateway.budget import Reservation
 from llm_gateway.errors import ErrorKind, ProviderError
 from llm_gateway.providers.base import ProviderResponse
 from llm_gateway.providers.registry import build_timeout
@@ -64,14 +65,33 @@ class StubRegistry:
 
 
 class StubBudget:
+    """Accepts every request and records what it was told the request cost.
+
+    `spent` is filled in by `settle`, which is where the router reports the real
+    cost — including a hedge's discarded answer, and including zero for a request
+    that failed and therefore owes nothing.
+    """
+
     def __init__(self) -> None:
         self.spent = 0.0
+        self.reserved = 0.0
+        self.settlements = 0
 
     async def refresh(self, force: bool = False) -> None:
         return None
 
     def check(self, estimated_cost_usd: float, api_key_id: str | None = None) -> None:
         return None
+
+    async def reserve(
+        self, estimated_cost_usd: float, api_key_id: str | None = None
+    ) -> Reservation:
+        self.reserved += estimated_cost_usd
+        return Reservation(amount=estimated_cost_usd, api_key_id=api_key_id)
+
+    async def settle(self, reservation: Reservation, actual_cost_usd: float) -> None:
+        self.settlements += 1
+        self.record_spend(actual_cost_usd, reservation.api_key_id)
 
     def record_spend(self, cost_usd: float, api_key_id: str | None = None) -> None:
         self.spent += cost_usd
