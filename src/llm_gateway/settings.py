@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import re
+from hmac import compare_digest
 from pathlib import Path
 from typing import Any, Literal
 
@@ -244,7 +245,20 @@ class AuthConfig(ConfigModel):
         return bool(self.keys)
 
     def lookup(self, presented: str) -> ApiKeyConfig | None:
-        return next((k for k in self.keys if k.key and k.key == presented), None)
+        """Find the key that was presented, in constant time.
+
+        `==` on strings stops at the first differing byte, which turns a token
+        check into a prefix oracle: an attacker who can time the response learns
+        the secret one character at a time. The loop also does not stop at the
+        first match, so how long the check takes does not depend on which key
+        matched — only on how many keys are configured.
+        """
+        offered = presented.encode()
+        found: ApiKeyConfig | None = None
+        for candidate in self.keys:
+            if candidate.key and compare_digest(candidate.key.encode(), offered):
+                found = candidate
+        return found
 
 
 class BudgetConfig(ConfigModel):
