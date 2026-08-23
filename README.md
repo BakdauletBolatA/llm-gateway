@@ -66,6 +66,18 @@ OLLAMA_ENABLED=true docker compose up -d gateway
 scripts/smoke_ollama.sh          # проверка, что живой провайдер отвечает
 ```
 
+Две реплики на одном Postgres — чтобы увидеть разницу между `local` и `shared`
+своими глазами, а не только в отчёте:
+
+```bash
+RATE_LIMIT_SCOPE=shared BUDGET_SCOPE=shared docker compose --profile replica up -d --build
+python scripts/shared_limit_probe.py \
+  --gateway http://127.0.0.1:8080 --gateway http://127.0.0.1:8082
+```
+
+Со `scope: local` те же две реплики выдают два лимита: и по частоте (103 запроса
+против 63), и по деньгам (перерасход +120.5% против +6.6%).
+
 С платными провайдерами — скопируйте `.env.example` в `.env`, положите ключи,
 поставьте `OPENAI_ENABLED=true` / `ANTHROPIC_ENABLED=true` и используйте маршрут
 `production`.

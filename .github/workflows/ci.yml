@@ -109,3 +109,5 @@ jobs:
         run: docker compose config --quiet
       - name: Validate the ollama profile
         run: docker compose --profile ollama config --quiet
+      - name: Validate the replica profile
+        run: docker compose --profile replica config --quiet
