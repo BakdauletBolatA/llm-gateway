@@ -117,6 +117,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     observability.configure_logging(settings.app.log_level, settings.app.log_format)
     state = await build_state(settings)
     app.state.core = state
+    # The TTL filters expired entries out of a lookup but never removes them, so
+    # without this the table only grows — and the search slows down with it.
+    state.cache.start_sweeper()
     logger.info(
         "gateway ready: providers=%s routes=%s reliability=%s",
         registry_summary(state),
@@ -135,6 +138,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     try:
         yield
     finally:
+        await state.cache.stop_sweeper()
         await state.cache.drain()
         await state.recorder.stop()
         await state.registry.aclose()
@@ -543,6 +547,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             bulkheads=state.bulkheads.snapshot(),
             budget=state.budget.snapshot().__dict__,
             recorder=state.recorder.stats(),
+            cache=state.cache.stats(),
         )
         return Response(content=observability.render(), media_type=observability.CONTENT_TYPE)
 

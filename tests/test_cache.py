@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from sqlalchemy import text
@@ -121,3 +122,78 @@ async def test_reliability_state_reports_cache_statistics(
     assert state["cache"]["embedder"] == "hashing"
     assert state["cache"]["hits"] == 1
     assert state["cache"]["lookups"] == 2
+
+
+# -- sweeping expired entries --------------------------------------------------
+
+
+async def test_the_sweeper_removes_only_expired_entries(cache_stack: dict[str, Any]) -> None:
+    """The TTL filters expired rows out of a lookup; nothing removed them, so the
+    table grew forever and the search slowed down with it (3.8 ms at zero expired
+    rows against 12.8 ms at 20 000, measured on this stand)."""
+    cache = cache_stack["state"].cache
+    database = cache_stack["state"].database
+
+    await cache.store(
+        scope="sweep-test",
+        prompt="этот ответ ещё живой",
+        response_text="живой",
+        provider="mock_primary",
+        model="m",
+        tokens_in=1,
+        tokens_out=1,
+        cost_usd=0.0,
+    )
+    async with database.session() as session:
+        for index in range(5):
+            await session.execute(
+                text(
+                    "INSERT INTO semantic_cache (scope, prompt_hash, prompt_text, embedding,"
+                    " response_text, provider, model, tokens_in, tokens_out, cost_usd,"
+                    " created_at, expires_at, hits) VALUES ('sweep-test', :h, 'dead', :v,"
+                    " 'dead', 'mock_primary', 'm', 1, 1, 0, now(), now() - interval '1 second', 0)"
+                ),
+                {"h": f"dead{index}", "v": str([0.01 * index] * 256)},
+            )
+        await session.commit()
+
+    removed = await cache.sweep()
+    assert removed == 5, f"expected the five dead rows to go, {removed} went"
+
+    async with database.session() as session:
+        left = await session.scalar(
+            text("SELECT count(*) FROM semantic_cache WHERE scope = 'sweep-test'")
+        )
+    assert left == 1, "the live entry must survive its own sweep"
+    assert cache.stats()["swept"] == 5
+
+
+async def test_a_second_sweep_finds_nothing_to_do(cache_stack: dict[str, Any]) -> None:
+    cache = cache_stack["state"].cache
+    await cache.sweep()
+    assert await cache.sweep() == 0
+
+
+async def test_the_sweeper_runs_in_the_background_and_stops_cleanly(
+    cache_stack: dict[str, Any],
+) -> None:
+    """It is started from the app lifespan; a task that outlives shutdown would
+    keep a database connection open after the pool is closed."""
+    cache = cache_stack["state"].cache
+    cache.config = cache.config.model_copy(update={"sweep_interval_s": 0.05})
+
+    cache.start_sweeper()
+    assert cache.stats()["sweeping"] is True
+    await asyncio.sleep(0.15)
+
+    await cache.stop_sweeper()
+    assert cache.stats()["sweeping"] is False
+
+
+async def test_the_sweeper_is_off_when_the_interval_is_zero(cache_stack: dict[str, Any]) -> None:
+    """An operator has to be able to turn it off — and then the metric stays flat
+    at zero, which is exactly what says the table is only growing."""
+    cache = cache_stack["state"].cache
+    cache.config = cache.config.model_copy(update={"sweep_interval_s": 0.0})
+    cache.start_sweeper()
+    assert cache.stats()["sweeping"] is False

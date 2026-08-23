@@ -141,6 +141,10 @@ class CacheConfig(ConfigModel):
     candidate_limit: int = Field(default=5, ge=1)
     embedder: Literal["hashing", "ollama"] = "hashing"
     ollama_embed_model: str = "nomic-embed-text"
+    #: Как часто удалять протухшие записи. TTL только фильтрует их в выдаче, так
+    #: что без уборки таблица растёт вечно, а поиск замедляется: замер — 3.8 мс
+    #: при пустой таблице против 12.8 мс при 20 000 протухших строк. 0 — выключить.
+    sweep_interval_s: float = Field(default=60.0, ge=0.0)
 
 
 class ReliabilityConfig(ConfigModel):

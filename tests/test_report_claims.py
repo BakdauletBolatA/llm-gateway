@@ -189,3 +189,50 @@ def test_the_generated_tables_match_the_results_on_disk() -> None:
         f"the generated section is stale against {len(results)} result files.\n"
         "Run `python -m chaos.report` — do not edit the tables by hand."
     )
+
+
+# -- the cache sweep probe ------------------------------------------------------
+
+#: (probe file, expired rows inserted, how the prose writes the p50)
+SWEEP_CLAIMS: list[tuple[str, int, str]] = [
+    ("cache_sweep_off", 0, "3.6 мс"),
+    ("cache_sweep_off", 1000, "3.3 мс"),
+    ("cache_sweep_off", 5000, "6.2 мс"),
+    ("cache_sweep_off", 20000, "13.5 мс"),
+    ("cache_sweep_on", 0, "3.9 мс"),
+    ("cache_sweep_on", 1000, "3.6 мс"),
+    ("cache_sweep_on", 5000, "4.2 мс"),
+    ("cache_sweep_on", 20000, "3.9 мс"),
+]
+
+
+@pytest.mark.parametrize(("name", "rows", "expected"), SWEEP_CLAIMS)
+def test_the_prose_quotes_the_measured_sweep(name: str, rows: int, expected: str) -> None:
+    path = Path("bench/probes") / f"{name}.json"
+    if not path.exists():
+        pytest.skip(f"{name} has not been measured")
+    steps = json.loads(path.read_text())["steps"]
+    step = next(s for s in steps if s["expired_rows_inserted"] == rows)
+    measured = f"{step['lookup_ms_p50']} мс"
+
+    assert measured == expected, (
+        f"{name} at {rows} expired rows is {measured}, this test expects {expected}: "
+        "re-run scripts/cache_sweep_probe.py and update the table in RELIABILITY.md."
+    )
+    assert measured in prose(), (
+        f"{name} at {rows} expired rows = {measured}, but RELIABILITY.md does not say so."
+    )
+
+
+def test_the_answer_is_served_at_every_step_of_the_sweep_probe() -> None:
+    """The finding is about cost, not correctness — and the report says so. If a
+    lookup ever came back empty the claim would have to change, not the sentence."""
+    for name in ("cache_sweep_off", "cache_sweep_on"):
+        path = Path("bench/probes") / f"{name}.json"
+        if not path.exists():
+            pytest.skip(f"{name} has not been measured")
+        steps = json.loads(path.read_text())["steps"]
+        assert all(step["answer_served"] for step in steps), (
+            f"{name}: expired rows hid a live answer, which would make this a "
+            "correctness finding and not a latency one"
+        )

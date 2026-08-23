@@ -119,6 +119,11 @@ BUDGET_BACKEND_ERRORS = _gauge(
     "Reservations that could not reach Postgres — the shared limit silently became "
     "per-replica, so this should alert rather than merely be graphed",
 )
+CACHE_SWEPT = _gauge(
+    "llm_gateway_cache_expired_swept",
+    "Expired cache entries deleted since start — flat at zero means the sweeper is "
+    "not running and the table is only growing",
+)
 RECORDER_QUEUE = _gauge("llm_gateway_recorder_queue_depth", "Call records waiting to be written")
 RECORDER_WRITTEN = _gauge(
     "llm_gateway_recorder_records_written", "Call records written to Postgres"
@@ -198,6 +203,7 @@ def refresh_gauges(
     bulkheads: list[dict[str, Any]],
     budget: dict[str, Any],
     recorder: dict[str, Any],
+    cache: dict[str, Any] | None = None,
 ) -> None:
     """Copy current state into gauges. Called on scrape, not on every request.
 
@@ -220,6 +226,8 @@ def refresh_gauges(
     BUDGET_SPENT.set(float(budget.get("spent_usd", 0.0)))
     BUDGET_SHARED.set(1.0 if budget.get("scope") == "shared" else 0.0)
     BUDGET_BACKEND_ERRORS.set(float(budget.get("backend_errors", 0)))
+    if cache is not None:
+        CACHE_SWEPT.set(float(cache.get("swept", 0)))
     RECORDER_QUEUE.set(float(recorder.get("queued", 0)))
     RECORDER_WRITTEN.set(float(recorder.get("written", 0)))
     RECORDER_DROPPED.set(float(recorder.get("dropped", 0)))

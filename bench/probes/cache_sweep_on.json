@@ -1,0 +1,39 @@
+{
+  "sweep": true,
+  "repeats_per_step": 25,
+  "candidate_limit": 5,
+  "steps": [
+    {
+      "expired_rows_inserted": 0,
+      "swept": 0,
+      "lookup_ms_p50": 3.9,
+      "lookup_ms_min": 3.1,
+      "table_bytes": 72949760,
+      "answer_served": true
+    },
+    {
+      "expired_rows_inserted": 1000,
+      "swept": 1000,
+      "lookup_ms_p50": 3.6,
+      "lookup_ms_min": 3.3,
+      "table_bytes": 74121216,
+      "answer_served": true
+    },
+    {
+      "expired_rows_inserted": 5000,
+      "swept": 4000,
+      "lookup_ms_p50": 4.2,
+      "lookup_ms_min": 3.2,
+      "table_bytes": 78807040,
+      "answer_served": true
+    },
+    {
+      "expired_rows_inserted": 20000,
+      "swept": 15007,
+      "lookup_ms_p50": 3.9,
+      "lookup_ms_min": 3.2,
+      "table_bytes": 104972288,
+      "answer_served": true
+    }
+  ]
+}
