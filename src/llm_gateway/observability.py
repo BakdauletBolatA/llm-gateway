@@ -110,6 +110,15 @@ BREAKER_FAILURE_RATIO = _gauge(
 )
 BUDGET_LIMIT = _gauge("llm_gateway_budget_limit_usd", "Configured budget limit for the period")
 BUDGET_SPENT = _gauge("llm_gateway_budget_spent_usd", "Spend recorded for the current period")
+BUDGET_SHARED = _gauge(
+    "llm_gateway_budget_shared",
+    "1 when the period counter is shared across replicas, 0 when it is per-process",
+)
+BUDGET_BACKEND_ERRORS = _gauge(
+    "llm_gateway_budget_backend_errors",
+    "Reservations that could not reach Postgres — the shared limit silently became "
+    "per-replica, so this should alert rather than merely be graphed",
+)
 RECORDER_QUEUE = _gauge("llm_gateway_recorder_queue_depth", "Call records waiting to be written")
 RECORDER_WRITTEN = _gauge(
     "llm_gateway_recorder_records_written", "Call records written to Postgres"
@@ -209,6 +218,8 @@ def refresh_gauges(
         BULKHEAD_SHED.labels(provider=provider).set(float(snapshot["shed"]))
     BUDGET_LIMIT.set(float(budget.get("limit_usd", 0.0)))
     BUDGET_SPENT.set(float(budget.get("spent_usd", 0.0)))
+    BUDGET_SHARED.set(1.0 if budget.get("scope") == "shared" else 0.0)
+    BUDGET_BACKEND_ERRORS.set(float(budget.get("backend_errors", 0)))
     RECORDER_QUEUE.set(float(recorder.get("queued", 0)))
     RECORDER_WRITTEN.set(float(recorder.get("written", 0)))
     RECORDER_DROPPED.set(float(recorder.get("dropped", 0)))

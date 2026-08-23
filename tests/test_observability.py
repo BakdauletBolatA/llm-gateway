@@ -46,6 +46,8 @@ async def test_metrics_endpoint_exposes_the_gateway_families(stack: dict[str, An
         "llm_gateway_cache_lookups_total",
         "llm_gateway_circuit_breaker_state",
         "llm_gateway_budget_spent_usd",
+        "llm_gateway_budget_shared",
+        "llm_gateway_budget_backend_errors",
         "llm_gateway_recorder_queue_depth",
     ):
         assert family in body, f"{family} missing from the exposition"
@@ -95,6 +97,12 @@ async def test_a_scrape_reflects_current_state_not_only_counters(stack: dict[str
     assert sample("llm_gateway_budget_spent_usd") > 0
     # 0 == closed, and this stack has never failed a call.
     assert sample("llm_gateway_circuit_breaker_state", provider="mock_primary") == 0.0
+    # The end-to-end stack runs the shipped default, which is the per-process counter.
+    assert sample("llm_gateway_budget_shared") == 0.0
+    assert sample("llm_gateway_budget_backend_errors") == 0.0, (
+        "a reservation that cannot reach Postgres degrades the limit to a per-replica "
+        "one, and this gauge is the only place that says so"
+    )
 
 
 def test_json_formatter_promotes_extra_fields() -> None:

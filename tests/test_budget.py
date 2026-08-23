@@ -266,3 +266,36 @@ async def test_an_unreachable_database_falls_back_to_the_local_limit() -> None:
             await budget.reserve(0.8)
     finally:
         await nowhere.aclose()
+
+
+async def test_the_snapshot_says_which_backend_is_in_use(shared_database: Database) -> None:
+    """`/v1/usage` and the dashboard both read this: an operator has to be able to
+    tell a shared limit from a per-replica one without reading the config."""
+    budget = shared_tracker(shared_database, limit=1.0)
+    snapshot = budget.snapshot()
+    assert snapshot.scope == "shared"
+    assert snapshot.backend_errors == 0
+
+    taken = await budget.reserve(0.2)
+    await budget.settle(taken, 0.2)
+    assert budget.snapshot().backend_errors == 0
+
+
+async def test_a_database_blip_is_visible_in_the_snapshot() -> None:
+    """Falling back to the local counter keeps the gateway up, and silence about it
+    would be the real bug: the deployment thinks it has one limit and has N."""
+    nowhere = Database(
+        DatabaseConfig(
+            dsn="postgresql+asyncpg://gateway@127.0.0.1:1/llm_gateway",
+            run_migrations_on_startup=False,
+        )
+    )
+    auth = AuthConfig.model_validate({"keys": []})
+    config = BudgetConfig(enabled=True, period="day", limit_usd=1.0, scope="shared")
+    budget = BudgetTracker(config, auth, nowhere)
+    try:
+        await budget.settle(await budget.reserve(0.1), 0.1)
+    finally:
+        await nowhere.aclose()
+
+    assert budget.snapshot().backend_errors > 0

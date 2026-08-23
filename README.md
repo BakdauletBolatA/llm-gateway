@@ -192,6 +192,7 @@ curl -s localhost:8080/metrics | grep -E '^llm_gateway_(requests|provider_calls|
 | `llm_gateway_cost_usd_total{provider}` | деньги по провайдерам |
 | `llm_gateway_circuit_breaker_state{provider}` | 0 закрыт, 1 half-open, 2 открыт |
 | `llm_gateway_budget_spent_usd` / `_limit_usd` | насколько близко к отказу по бюджету |
+| `llm_gateway_budget_shared` / `_backend_errors` | лимит общий на реплики или по-репличный, и не сорвались ли резервации |
 | `llm_gateway_recorder_queue_depth` / `_records_dropped` | не теряется ли журнал вызовов |
 
 Значения-состояния (брейкеры, бюджет, очередь журнала) заполняются в момент

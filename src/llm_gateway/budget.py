@@ -122,6 +122,10 @@ class BudgetSnapshot:
     spent_usd: float
     remaining_usd: float
     scope: str = "local"
+    #: Reservations or settlements that could not reach Postgres. Non-zero means the
+    #: shared limit quietly degraded to a per-replica one, which is invisible from
+    #: the outside — the gateway keeps answering, just with a weaker guarantee.
+    backend_errors: int = 0
     per_key: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
@@ -362,6 +366,7 @@ class BudgetTracker:
             spent_usd=round(spent, 6),
             remaining_usd=round(max(0.0, self._config.limit_usd - spent), 6),
             scope=self._config.scope,
+            backend_errors=self._reserve_errors,
             per_key={
                 key_id: {
                     "spent_usd": round(counter.spent, 6),

@@ -1,11 +1,17 @@
 {
   "title": "llm-gateway",
   "uid": "llm-gateway",
-  "tags": ["llm-gateway", "reliability"],
+  "tags": [
+    "llm-gateway",
+    "reliability"
+  ],
   "timezone": "browser",
   "schemaVersion": 39,
   "refresh": "10s",
-  "time": { "from": "now-1h", "to": "now" },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
   "templating": {
     "list": [
       {
@@ -21,14 +27,27 @@
     {
       "type": "row",
       "title": "Доступность",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      }
     },
     {
       "type": "stat",
       "title": "Success rate (5m)",
       "description": "Доля ответов 200. Ниже 99% — смотреть на панель с видами ошибок.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 1 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "percentunit",
@@ -37,9 +56,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "red", "value": null },
-              { "color": "orange", "value": 0.95 },
-              { "color": "green", "value": 0.99 }
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.95
+              },
+              {
+                "color": "green",
+                "value": 0.99
+              }
             ]
           }
         }
@@ -54,9 +82,21 @@
     {
       "type": "timeseries",
       "title": "Запросы по исходам",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 6, "w": 9, "x": 6, "y": 1 },
-      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 9,
+        "x": 6,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      },
       "targets": [
         {
           "expr": "sum by (outcome) (rate(llm_gateway_requests_total[5m]))",
@@ -68,9 +108,21 @@
       "type": "timeseries",
       "title": "Ошибки по видам",
       "description": "throttled — наш rate limit; capacity — наша очередь к провайдеру полна; circuit_open — брейкер; остальное пришло от провайдера.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 6, "w": 9, "x": 15, "y": 1 },
-      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 9,
+        "x": 15,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      },
       "targets": [
         {
           "expr": "sum by (kind) (rate(llm_gateway_request_errors_total[5m]))",
@@ -81,15 +133,32 @@
     {
       "type": "row",
       "title": "Латентность",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 7 }
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 7
+      }
     },
     {
       "type": "timeseries",
       "title": "Латентность запроса: p50 / p95 / p99",
       "description": "Хвост важнее среднего: именно на нём работают хедж и таймауты.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 8 },
-      "fieldConfig": { "defaults": { "unit": "s" } },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
       "targets": [
         {
           "expr": "histogram_quantile(0.5, sum by (le) (rate(llm_gateway_request_duration_seconds_bucket[5m])))",
@@ -108,9 +177,21 @@
     {
       "type": "timeseries",
       "title": "p95 вызова провайдера",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 8 },
-      "fieldConfig": { "defaults": { "unit": "s" } },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
       "targets": [
         {
           "expr": "histogram_quantile(0.95, sum by (le, provider) (rate(llm_gateway_provider_call_duration_seconds_bucket[5m])))",
@@ -121,19 +202,45 @@
     {
       "type": "row",
       "title": "Механизмы надёжности",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 15 }
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 15
+      }
     },
     {
       "type": "timeseries",
       "title": "Работа, созданная механизмами",
       "description": "Ретраи, fallback и хеджи — это дополнительная нагрузка на провайдеров. Рост здесь означает, что за той же доступностью система платит больше.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 16 },
-      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
       "targets": [
-        { "expr": "sum(rate(llm_gateway_retries_total[5m]))", "legendFormat": "ретраи" },
-        { "expr": "sum(rate(llm_gateway_fallbacks_total[5m]))", "legendFormat": "fallback" },
-        { "expr": "sum(rate(llm_gateway_hedges_total[5m]))", "legendFormat": "хеджи" },
+        {
+          "expr": "sum(rate(llm_gateway_retries_total[5m]))",
+          "legendFormat": "ретраи"
+        },
+        {
+          "expr": "sum(rate(llm_gateway_fallbacks_total[5m]))",
+          "legendFormat": "fallback"
+        },
+        {
+          "expr": "sum(rate(llm_gateway_hedges_total[5m]))",
+          "legendFormat": "хеджи"
+        },
         {
           "expr": "sum(rate(llm_gateway_breaker_skips_total[5m]))",
           "legendFormat": "отсечено брейкером"
@@ -143,9 +250,22 @@
     {
       "type": "timeseries",
       "title": "Circuit breaker: 0 закрыт / 1 half-open / 2 открыт",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 16 },
-      "fieldConfig": { "defaults": { "min": 0, "max": 2 } },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 2
+        }
+      },
       "targets": [
         {
           "expr": "llm_gateway_circuit_breaker_state",
@@ -157,9 +277,21 @@
       "type": "timeseries",
       "title": "Вызовы провайдеров по исходам",
       "description": "cancelled — проиграл гонку хеджу; discarded — ответ пришёл слишком поздно; skipped_breaker — не отправлен.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 23 },
-      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 23
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
       "targets": [
         {
           "expr": "sum by (provider, outcome) (rate(llm_gateway_provider_calls_total[5m]))",
@@ -170,24 +302,55 @@
     {
       "type": "timeseries",
       "title": "Лимит конкурентности: занято из доступного",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 23 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 23
+      },
       "targets": [
-        { "expr": "llm_gateway_bulkhead_in_flight", "legendFormat": "{{provider}} в полёте" },
-        { "expr": "llm_gateway_bulkhead_limit", "legendFormat": "{{provider}} лимит" }
+        {
+          "expr": "llm_gateway_bulkhead_in_flight",
+          "legendFormat": "{{provider}} в полёте"
+        },
+        {
+          "expr": "llm_gateway_bulkhead_limit",
+          "legendFormat": "{{provider}} лимит"
+        }
       ]
     },
     {
       "type": "row",
       "title": "Деньги и кэш",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 30 }
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 30
+      }
     },
     {
       "type": "timeseries",
       "title": "Расход, $/час по провайдерам",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 31 },
-      "fieldConfig": { "defaults": { "unit": "currencyUSD" } },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 31
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD"
+        }
+      },
       "targets": [
         {
           "expr": "sum by (provider) (rate(llm_gateway_cost_usd_total[5m])) * 3600",
@@ -199,8 +362,16 @@
       "type": "gauge",
       "title": "Бюджет периода",
       "description": "При достижении лимита шлюз отвечает 402 до вызова провайдера.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 31 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 8,
+        "y": 31
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "percentunit",
@@ -209,9 +380,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "orange", "value": 0.8 },
-              { "color": "red", "value": 0.95 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.8
+              },
+              {
+                "color": "red",
+                "value": 0.95
+              }
             ]
           }
         }
@@ -225,17 +405,65 @@
     },
     {
       "type": "timeseries",
+      "title": "Бюджет: общий счётчик и его отказы",
+      "description": "llm_gateway_budget_shared = 1, когда лимит принадлежит деплойменту, а не процессу. backend_errors > 0 означает, что резервация не дошла до Postgres и лимит молча стал по-репличным — это алерт, а не график: снаружи шлюз продолжает отвечать, гарантия при этом слабее.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 12,
+        "y": 31
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2
+          },
+          "min": 0
+        }
+      },
+      "targets": [
+        {
+          "expr": "llm_gateway_budget_shared",
+          "legendFormat": "общий счётчик (1/0)"
+        },
+        {
+          "expr": "llm_gateway_budget_backend_errors",
+          "legendFormat": "сорванных резерваций"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
       "title": "Хит-рейт кэша и очередь журнала",
       "description": "Растущая очередь журнала означает, что Postgres не успевает; при переполнении записи отбрасываются, чтобы не задерживать запросы.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 31 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 31
+      },
       "targets": [
         {
           "expr": "sum(rate(llm_gateway_cache_lookups_total{result=\"hit\"}[5m])) / clamp_min(sum(rate(llm_gateway_cache_lookups_total[5m])), 0.001)",
           "legendFormat": "хит-рейт кэша"
         },
-        { "expr": "llm_gateway_recorder_queue_depth", "legendFormat": "очередь журнала" },
-        { "expr": "llm_gateway_recorder_records_dropped", "legendFormat": "потеряно записей" }
+        {
+          "expr": "llm_gateway_recorder_queue_depth",
+          "legendFormat": "очередь журнала"
+        },
+        {
+          "expr": "llm_gateway_recorder_records_dropped",
+          "legendFormat": "потеряно записей"
+        }
       ]
     }
   ]
