@@ -161,3 +161,31 @@ def test_the_prose_quotes_the_measured_probe(
         f"{name}.{field} = {measured}, but RELIABILITY.md does not say so.\n"
         f"Where it is quoted: {where}."
     )
+
+
+# -- the generated section ------------------------------------------------------
+
+
+def test_the_generated_tables_match_the_results_on_disk() -> None:
+    """The tables between the markers are built from bench/results, not written.
+
+    Nothing stops someone from editing a generated table by hand, or from adding a
+    result file and forgetting to rebuild — and either way the document would keep
+    looking right. This rebuilds the section in memory and compares.
+    """
+    from chaos.report import BEGIN_MARKER as BUILD_BEGIN
+    from chaos.report import build_section, load_results
+
+    results = load_results(RESULTS)
+    assert results, "bench/results is empty, so the report cannot be verified"
+
+    expected = build_section(results)
+    document = REPORT.read_text(encoding="utf-8")
+    start = document.index(BUILD_BEGIN)
+    end = document.index(END_MARKER) + len(END_MARKER)
+    actual = document[start:end]
+
+    assert actual == expected, (
+        f"the generated section is stale against {len(results)} result files.\n"
+        "Run `python -m chaos.report` — do not edit the tables by hand."
+    )
