@@ -479,7 +479,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         }
 
     @app.get("/v1/reliability/state")
-    async def reliability_state(state: Annotated[AppState, Depends(get_state)]) -> dict[str, Any]:
+    async def reliability_state(
+        state: Annotated[AppState, Depends(get_state)],
+        _: Annotated[str | None, Depends(authenticate)] = None,
+    ) -> dict[str, Any]:
+        """Live state of every mechanism.
+
+        Authenticated, unlike /v1/config and /metrics: the budget snapshot carries
+        per-key spend, which is one tenant's data and not an operator's dashboard.
+        With auth off (the shipped default) this is open, like everything else.
+        """
         return {
             "circuit_breakers": state.breakers.snapshot(),
             "bulkheads": state.bulkheads.snapshot(),
@@ -492,12 +501,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.post("/v1/reliability/reset")
     async def reliability_reset(
         state: Annotated[AppState, Depends(get_state)],
+        _: Annotated[str | None, Depends(authenticate)] = None,
         cache: Annotated[bool, Query()] = False,
     ) -> dict[str, Any]:
         """Reset breaker state (and optionally the cache) between chaos runs.
 
         The harness calls this before every scenario so runs cannot inherit a warm
         cache or a half-open breaker from the previous one.
+
+        Authenticated, because it is the one endpoint here that *writes*:
+        `?cache=true` deletes every cached answer, and the next requests all go to
+        a paid provider. An open reset is a way to make someone else's gateway
+        expensive, which is not the same risk as an open gauge.
         """
         state.breakers.reset()
         state.bulkheads.reset()

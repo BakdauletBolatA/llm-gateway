@@ -151,10 +151,15 @@ async def run_scenario(
     mock: str,
     seed: int,
     note: str | None,
+    api_key: str | None = None,
 ) -> dict[str, Any]:
     prompts, workload_stats = build_workload(count, seed=seed)
+    # One header set for every client here: the workload, the setup calls and the
+    # teardown calls all talk to the same gateway, and /v1/usage has always
+    # required a key when auth is on.
+    headers = {"authorization": f"Bearer {api_key}"} if api_key else {}
 
-    async with httpx.AsyncClient(timeout=httpx.Timeout(30.0)) as admin:
+    async with httpx.AsyncClient(timeout=httpx.Timeout(30.0), headers=headers) as admin:
         await _post(admin, f"{mock}/admin/scenario", {"scenario": scenario})
         await _post(admin, f"{mock}/admin/reset")
         # Fresh breakers and an empty cache: every scenario starts from the same
@@ -174,6 +179,7 @@ async def run_scenario(
     async with httpx.AsyncClient(
         timeout=httpx.Timeout(timeout_s),
         limits=httpx.Limits(max_connections=concurrency * 2),
+        headers=headers,
     ) as client:
         workers = [
             asyncio.create_task(_worker(client, url, route, queue, aggregate))
@@ -182,7 +188,7 @@ async def run_scenario(
         await asyncio.gather(*workers)
     duration_s = time.perf_counter() - started
 
-    async with httpx.AsyncClient(timeout=httpx.Timeout(60.0)) as admin:
+    async with httpx.AsyncClient(timeout=httpx.Timeout(60.0), headers=headers) as admin:
         usage_after = await _get(admin, f"{gateway}/v1/usage")
         reliability = await _get(admin, f"{gateway}/v1/reliability/state")
         mock_state = await _get(admin, f"{mock}/admin/state")
@@ -272,6 +278,7 @@ async def main_async(args: argparse.Namespace) -> int:
             mock=args.mock,
             seed=args.seed,
             note=args.note,
+            api_key=args.api_key,
         )
         _write(result, out_dir)
         _print_line(result)
@@ -300,6 +307,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--seed", type=int, default=42, help="workload seed")
     parser.add_argument("--settle", type=float, default=3.0, help="pause between scenarios")
     parser.add_argument("--note", default=None, help="free-form note stored in the result")
+    parser.add_argument(
+        "--api-key",
+        default=os.environ.get("GATEWAY_API_KEY"),
+        help="bearer token, when the gateway under test has auth enabled "
+        "(default: $GATEWAY_API_KEY)",
+    )
     return parser
 
 

@@ -147,3 +147,53 @@ async def test_the_config_endpoint_never_exposes_a_key(authed_stack: dict[str, A
     assert response.status_code == 200
     assert TENANT_KEY not in response.text
     assert response.json()["auth_enabled"] is True
+
+
+async def test_the_ops_write_endpoint_is_closed(authed_stack: dict[str, Any]) -> None:
+    """`?cache=true` deletes every cached answer, so the next requests all go to a
+    paid provider. Open, that is a way to make someone else's gateway expensive."""
+    client = authed_stack["client"]
+    assert (await client.post("/v1/reliability/reset?cache=true")).status_code == 401
+    assert (
+        await client.post(
+            "/v1/reliability/reset?cache=true",
+            headers={"authorization": f"Bearer {OTHER_KEY}"},
+        )
+    ).status_code == 401
+
+    allowed = await client.post(
+        "/v1/reliability/reset?cache=true", headers={"authorization": f"Bearer {TENANT_KEY}"}
+    )
+    assert allowed.status_code == 200, allowed.text
+
+
+async def test_reliability_state_does_not_leak_per_key_spend(
+    authed_stack: dict[str, Any],
+) -> None:
+    """The budget snapshot inside it carries per-key spend — tenant data, not a
+    gauge — which is why this one is authenticated and /metrics is not."""
+    client = authed_stack["client"]
+    assert (await client.get("/v1/reliability/state")).status_code == 401
+
+    state = await client.get(
+        "/v1/reliability/state", headers={"authorization": f"Bearer {TENANT_KEY}"}
+    )
+    assert state.status_code == 200
+    assert "budget" in state.json()
+
+
+async def test_the_open_ops_endpoints_stay_open(authed_stack: dict[str, Any]) -> None:
+    """Read-only infrastructure endpoints belong behind a network policy, not behind
+    a tenant's API key: a Prometheus scraper is not a tenant."""
+    client = authed_stack["client"]
+    for path in ("/metrics", "/healthz", "/readyz", "/v1/config"):
+        response = await client.get(path)
+        assert response.status_code == 200, f"{path} answered {response.status_code}"
+
+
+async def test_with_auth_off_the_ops_endpoints_need_no_key(stack: dict[str, Any]) -> None:
+    """The shipped config has no keys, and the chaos harness resets state before
+    every scenario — gating that behind auth would break the default workflow."""
+    client = stack["client"]
+    assert (await client.post("/v1/reliability/reset")).status_code == 200
+    assert (await client.get("/v1/reliability/state")).status_code == 200
