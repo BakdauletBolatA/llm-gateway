@@ -1,0 +1,63 @@
+{
+  "scenario": "primary_outage",
+  "replicas": 2,
+  "gateways": [
+    "http://127.0.0.1:8080",
+    "http://127.0.0.1:8082"
+  ],
+  "requests": 600,
+  "answered_200": 600,
+  "status_codes": {
+    "200": 600
+  },
+  "duration_s": 3.27,
+  "served_by_upstream": {
+    "primary": 30,
+    "secondary": 590,
+    "tertiary": 0
+  },
+  "wasted_calls_to_dead_upstream": 30,
+  "wasted_per_request": 0.05,
+  "breakers": [
+    {
+      "gateway": "http://127.0.0.1:8080",
+      "circuit_breakers": [
+        {
+          "provider": "mock_primary",
+          "state": "open",
+          "failure_ratio": 0.0
+        },
+        {
+          "provider": "mock_secondary",
+          "state": "closed",
+          "failure_ratio": 0.0
+        },
+        {
+          "provider": "mock_tertiary",
+          "state": "closed",
+          "failure_ratio": 0.0
+        }
+      ]
+    },
+    {
+      "gateway": "http://127.0.0.1:8082",
+      "circuit_breakers": [
+        {
+          "provider": "mock_primary",
+          "state": "open",
+          "failure_ratio": 1.0
+        },
+        {
+          "provider": "mock_secondary",
+          "state": "closed",
+          "failure_ratio": 0.0
+        },
+        {
+          "provider": "mock_tertiary",
+          "state": "closed",
+          "failure_ratio": 0.0
+        }
+      ]
+    }
+  ]
+}

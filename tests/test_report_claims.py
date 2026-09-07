@@ -236,3 +236,73 @@ def test_the_answer_is_served_at_every_step_of_the_sweep_probe() -> None:
             f"{name}: expired rows hid a live answer, which would make this a "
             "correctness finding and not a latency one"
         )
+
+
+# -- the breaker replica probe --------------------------------------------------
+
+#: (probe file, field, how the prose writes it)
+BREAKER_CLAIMS: list[tuple[str, str]] = [
+    ("breaker_1replica_n200", "22 стука"),
+    ("breaker_2replicas_n200", "29 стуков"),
+    ("breaker_1replica_n600", "23 стука"),
+    ("breaker_2replicas_n600", "30 стуков"),
+]
+
+
+@pytest.mark.parametrize(("name", "expected"), BREAKER_CLAIMS)
+def test_the_prose_quotes_the_measured_breaker_probe(name: str, expected: str) -> None:
+    path = Path("bench/probes") / f"{name}.json"
+    if not path.exists():
+        pytest.skip(f"{name} has not been measured")
+    wasted = json.loads(path.read_text())["wasted_calls_to_dead_upstream"]
+
+    assert expected.startswith(f"{wasted} "), (
+        f"{name} wasted {wasted} calls, the report says {expected!r}: "
+        "re-run ONLY=breaker scripts/run_probes.sh and update the table."
+    )
+    assert expected in prose(), f"{name} = {expected}, but RELIABILITY.md does not say so."
+
+
+def test_the_cost_of_a_second_replica_does_not_grow_with_traffic() -> None:
+    """The whole argument for not building a shared breaker. If this ever stops
+    holding, the section is wrong and the decision has to be revisited — so it is
+    an assertion, not a sentence."""
+    probes = {}
+    for name in (
+        "breaker_1replica_n200",
+        "breaker_2replicas_n200",
+        "breaker_1replica_n600",
+        "breaker_2replicas_n600",
+    ):
+        path = Path("bench/probes") / f"{name}.json"
+        if not path.exists():
+            pytest.skip(f"{name} has not been measured")
+        probes[name] = json.loads(path.read_text())
+
+    small = (
+        probes["breaker_2replicas_n200"]["wasted_calls_to_dead_upstream"]
+        - probes["breaker_1replica_n200"]["wasted_calls_to_dead_upstream"]
+    )
+    large = (
+        probes["breaker_2replicas_n600"]["wasted_calls_to_dead_upstream"]
+        - probes["breaker_1replica_n600"]["wasted_calls_to_dead_upstream"]
+    )
+    assert small == large == 7, (
+        f"the second replica cost {small} extra calls at n=200 and {large} at n=600. "
+        "The report claims this is a constant equal to min_calls; if it now scales "
+        "with traffic, a shared breaker is back on the table."
+    )
+    assert "**+7**" in prose()
+
+
+def test_every_breaker_probe_still_answered_every_request() -> None:
+    """The finding is about wasted calls, not availability: fallback carried all of
+    them. A drop here would make it a different finding."""
+    for name, _ in BREAKER_CLAIMS:
+        path = Path("bench/probes") / f"{name}.json"
+        if not path.exists():
+            pytest.skip(f"{name} has not been measured")
+        probe = json.loads(path.read_text())
+        assert probe["answered_200"] == probe["requests"], (
+            f"{name}: {probe['answered_200']} of {probe['requests']} answered"
+        )

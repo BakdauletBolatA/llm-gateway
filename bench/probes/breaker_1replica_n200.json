@@ -1,0 +1,42 @@
+{
+  "scenario": "primary_outage",
+  "replicas": 1,
+  "gateways": [
+    "http://127.0.0.1:8080"
+  ],
+  "requests": 200,
+  "answered_200": 200,
+  "status_codes": {
+    "200": 200
+  },
+  "duration_s": 2.09,
+  "served_by_upstream": {
+    "primary": 22,
+    "secondary": 190,
+    "tertiary": 0
+  },
+  "wasted_calls_to_dead_upstream": 22,
+  "wasted_per_request": 0.11,
+  "breakers": [
+    {
+      "gateway": "http://127.0.0.1:8080",
+      "circuit_breakers": [
+        {
+          "provider": "mock_primary",
+          "state": "open",
+          "failure_ratio": 1.0
+        },
+        {
+          "provider": "mock_secondary",
+          "state": "closed",
+          "failure_ratio": 0.0
+        },
+        {
+          "provider": "mock_tertiary",
+          "state": "closed",
+          "failure_ratio": 0.0
+        }
+      ]
+    }
+  ]
+}

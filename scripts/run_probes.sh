@@ -16,6 +16,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 OUT="${OUT:-bench/probes}"
+# ONLY=breaker — прогнать одну группу, не трогая остальные артефакты. Нужно потому,
+# что цифры в отчёте пиньтся тестом по точному совпадению: перезамер группы, которую
+# не собирались трогать, уронит тесты и потребует править текст на ровном месте.
+ONLY="${ONLY:-all}"
 VENV="${VENV:-$ROOT/.venv}"
 PSQL_DSN="${PSQL_DSN:-postgresql://gateway:gateway@127.0.0.1:5432/llm_gateway}"
 N="${N:-200}"
@@ -44,10 +48,10 @@ probe() {
   stop_all
   reset_period
   export GATEWAY_CONFIG_OVERLAY="$overlay"
-  ./scripts/dev_stack.sh up >/dev/null 2>&1
+  ./scripts/dev_stack.sh up >/dev/null
   local args=(--gateway http://127.0.0.1:8080)
   if [[ "$replicas" == "2" ]]; then
-    RUN_DIR=.run/replica-b GATEWAY_PORT=8082 ./scripts/dev_stack.sh up-gateway >/dev/null 2>&1
+    RUN_DIR=.run/replica-b GATEWAY_PORT=8082 ./scripts/dev_stack.sh up-gateway >/dev/null
     args+=(--gateway http://127.0.0.1:8082)
   fi
   sleep 3
@@ -56,10 +60,13 @@ probe() {
   echo "  $name -> $OUT/$name.json"
 }
 
+if [[ "$ONLY" == "all" || "$ONLY" == "ratelimit" ]]; then
 echo "== rate limit: 25 rps / burst 25, две реплики =="
 RATE_LIMIT_SCOPE=local  probe ratelimit_local_2  config/extras/ratelimit_tiny.yaml 2 600 20
 RATE_LIMIT_SCOPE=shared probe ratelimit_shared_2 config/extras/ratelimit_tiny.yaml 2 600 20
+fi
 
+if [[ "$ONLY" == "all" || "$ONLY" == "budget" ]]; then
 echo "== бюджет: лимит \$0.005 =="
 BUDGET_SCOPE=local  probe budget_local_1  config/extras/budget_tiny.yaml 1 "$N" "$CONCURRENCY"
 BUDGET_SCOPE=local  probe budget_local_2  config/extras/budget_tiny.yaml 2 "$N" "$CONCURRENCY"
@@ -69,5 +76,34 @@ BUDGET_SCOPE=shared probe budget_shared_2 config/extras/budget_tiny.yaml 2 "$N" 
 # estimate_output_tokens, и видно вторую половину размена — недоиспользование.
 BUDGET_SCOPE=shared probe budget_shared_2_conservative \
   config/extras/budget_tiny.yaml 2 "$N" "$CONCURRENCY" --max-tokens 0
+fi
+
+# breaker <файл> <реплик> <n>
+breaker() {
+  local name="$1" replicas="$2" n="$3"
+  stop_all
+  reset_period
+  export GATEWAY_CONFIG_OVERLAY=""
+  ./scripts/dev_stack.sh up >/dev/null
+  local args=(--gateway http://127.0.0.1:8080)
+  if [[ "$replicas" == "2" ]]; then
+    RUN_DIR=.run/replica-b GATEWAY_PORT=8082 ./scripts/dev_stack.sh up-gateway >/dev/null
+    args+=(--gateway http://127.0.0.1:8082)
+  fi
+  sleep 3
+  "$VENV/bin/python" scripts/breaker_replica_probe.py "${args[@]}" \
+    --n "$n" --concurrency 10 --out "$OUT/$name.json" >/dev/null
+  echo "  $name -> $OUT/$name.json"
+}
+
+if [[ "$ONLY" == "all" || "$ONLY" == "breaker" ]]; then
+echo "== брейкер: сколько стуков в мёртвого провайдера =="
+# Две пары: одна показывает цену второй реплики, вторая — что эта цена не растёт
+# вместе с трафиком. Из этих четырёх чисел следует решение НЕ делать общий брейкер.
+breaker breaker_1replica_n200 1 200
+breaker breaker_2replicas_n200 2 200
+breaker breaker_1replica_n600 1 600
+breaker breaker_2replicas_n600 2 600
+fi
 
 echo "готово: $OUT"

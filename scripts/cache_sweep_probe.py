@@ -1,15 +1,16 @@
-"""Что стоит кэш, из которого не удаляют протухшие записи.
+"""What a cache costs when nothing ever deletes its expired entries.
 
-TTL только отфильтровывает такие записи из выдачи — удалять их он не обязан, и без
-уборки таблица растёт вечно. Вопрос замера: во что это обходится поиску.
+A TTL only filters expired rows out of a lookup; it is not obliged to remove them,
+and without a sweep the table grows forever. The question this measures is what
+that costs the search.
 
-Лукап здесь — точное совпадение, то есть случай, ради которого кэш и существует:
-ответ находится всегда, меряется только цена поиска.
+The lookup here is an exact match — the case the cache actually exists for — so
+the answer is always findable and only the price of finding it is measured.
 
-    python scripts/cache_sweep_probe.py               # без уборки
-    python scripts/cache_sweep_probe.py --sweep       # уборка перед замером
+    python scripts/cache_sweep_probe.py               # no sweeping
+    python scripts/cache_sweep_probe.py --sweep       # swept before each step
 
-Результат — bench/probes/cache_sweep_{off,on}.json; на него ссылается RELIABILITY.md.
+Writes bench/probes/cache_sweep_{off,on}.json, which RELIABILITY.md quotes.
 """
 
 from __future__ import annotations
@@ -125,8 +126,8 @@ async def measure(dsn: str, sweep: bool, repeats: int) -> dict[str, Any]:
 def main() -> int:
     parser = argparse.ArgumentParser(prog="cache_sweep_probe")
     parser.add_argument("--dsn", default=DEFAULT_DSN)
-    parser.add_argument("--sweep", action="store_true", help="убирать протухшие перед замером")
-    parser.add_argument("--repeats", type=int, default=25, help="лукапов на каждую ступень")
+    parser.add_argument("--sweep", action="store_true", help="sweep before measuring")
+    parser.add_argument("--repeats", type=int, default=25, help="lookups per rung")
     parser.add_argument("--out", default="bench/probes")
     args = parser.parse_args()
 
