@@ -61,6 +61,20 @@ GATEWAY_CONFIG_OVERLAY=config/iterations/01_baseline.yaml docker compose up -d g
 python -m chaos.run --label 01_baseline --scenario storm
 ```
 
+Три раздела отчёта хаос-харнессом не воспроизводятся, потому что задают другой
+вопрос: не «как механизм ведёт себя под отказами», а «принадлежит ли он процессу».
+Харнесс гоняет один шлюз; здесь нужны два — или таблица, забитая мусором:
+
+```bash
+scripts/run_probes.sh                              # лимит частоты и бюджет на двух репликах
+python scripts/cache_sweep_probe.py                # кэш без уборки протухших
+python scripts/cache_sweep_probe.py --sweep        # он же с уборкой
+```
+
+Результаты ложатся в `bench/probes/*.json`, и `tests/test_report_claims.py`
+проверяет, что проза цитирует именно их: перезамер, не доехавший до текста,
+роняет тесты.
+
 ### Стенд, на котором получены цифры
 
 | | |
