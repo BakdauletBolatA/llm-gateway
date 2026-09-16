@@ -8,6 +8,13 @@
 #   SCENARIOS="storm hang" scripts/run_ablations.sh
 set -euo pipefail
 
+# Отчёт в RELIABILITY.md измерял лексический семантический кэш (хеш-эмбеддер,
+# порог 0.60) на воркладе из 22 заведомо разных тем. В config/gateway.yaml по
+# умолчанию стоит безопасный exact, поэтому воспроизведение включает измеренный
+# режим явно. Переопределите переменные, чтобы измерить другой.
+export GW__RELIABILITY__CACHE__MATCH="${GW__RELIABILITY__CACHE__MATCH:-semantic}"
+export GW__RELIABILITY__CACHE__ALLOW_LEXICAL_SEMANTIC="${GW__RELIABILITY__CACHE__ALLOW_LEXICAL_SEMANTIC:-true}"
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 

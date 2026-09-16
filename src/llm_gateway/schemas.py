@@ -21,18 +21,32 @@ class ChatCompletionRequest(BaseModel):
     max_tokens: int | None = Field(default=None, ge=1, le=32000)
     temperature: float | None = Field(default=None, ge=0.0, le=2.0)
     stop: list[str] | None = None
-    # Escape hatch for clients that must not be served from the semantic cache.
-    cache: bool = True
+    # Opt-in to the response cache. None means "not asked for": with the default
+    # reliability.cache.require_opt_in the request is never served from the cache.
+    cache: bool | None = None
 
     def prompt_text(self) -> str:
-        """Flattened prompt used for cache keys and token estimation."""
+        """Flattened prompt used for token estimation."""
         return "\n".join(f"{m.role}: {m.content}" for m in self.messages)
 
+    def _last_user_index(self) -> int:
+        for index in range(len(self.messages) - 1, -1, -1):
+            if self.messages[index].role == "user":
+                return index
+        return len(self.messages) - 1
+
     def user_text(self) -> str:
-        for message in reversed(self.messages):
-            if message.role == "user":
-                return message.content
-        return self.messages[-1].content
+        return self.messages[self._last_user_index()].content
+
+    def context_text(self) -> str:
+        """Everything except the last user message: system prompt and dialogue so far.
+
+        The cache matches the question, but the answer also depends on this. It is
+        hashed into the cache scope, so the same question under a different system
+        prompt or after a different conversation is never a hit.
+        """
+        last = self._last_user_index()
+        return "\n".join(f"{m.role}: {m.content}" for i, m in enumerate(self.messages) if i != last)
 
 
 class Usage(BaseModel):

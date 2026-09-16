@@ -27,13 +27,14 @@ from typing import Any
 from sqlalchemy import text
 
 from llm_gateway.cache.embedder import HashingEmbedder
-from llm_gateway.cache.store import SemanticCache
+from llm_gateway.cache.store import CacheKey, SemanticCache
 from llm_gateway.db.session import Database
 from llm_gateway.settings import CacheConfig, DatabaseConfig
 
 DEFAULT_DSN = "postgresql+asyncpg://gateway:gateway@127.0.0.1:5432/llm_gateway"
 SCOPE = "cache-sweep-probe"
 PROMPT = "как обновить зависимость в проекте на питоне"
+KEY = CacheKey(scope=SCOPE, query=PROMPT)
 LADDER = (0, 1000, 5000, 20000)
 
 _INSERT_DEAD = text(
@@ -46,7 +47,15 @@ _INSERT_DEAD = text(
 
 async def measure(dsn: str, sweep: bool, repeats: int) -> dict[str, Any]:
     database = Database(DatabaseConfig(dsn=dsn, run_migrations_on_startup=False))
-    config = CacheConfig(enabled=True, similarity_threshold=0.90, ttl_s=900, candidate_limit=5)
+    # The probe times the nearest-neighbour search, so it measures the semantic matcher.
+    config = CacheConfig(
+        enabled=True,
+        match="semantic",
+        allow_lexical_semantic=True,
+        similarity_threshold=0.90,
+        ttl_s=900,
+        candidate_limit=5,
+    )
     embedder = HashingEmbedder(config.embedding_dim)
     cache = SemanticCache(config, embedder, database)
     expired_at = datetime.now(UTC) - timedelta(seconds=1)
@@ -55,8 +64,7 @@ async def measure(dsn: str, sweep: bool, repeats: int) -> dict[str, Any]:
         await session.execute(text("DELETE FROM semantic_cache WHERE scope = :s"), {"s": SCOPE})
         await session.commit()
     await cache.store(
-        scope=SCOPE,
-        prompt=PROMPT,
+        key=KEY,
         response_text="живой ответ",
         provider="mock_primary",
         model="m",
@@ -91,7 +99,7 @@ async def measure(dsn: str, sweep: bool, repeats: int) -> dict[str, Any]:
         served = False
         for _ in range(repeats):
             started = time.perf_counter()
-            hit = await cache.lookup(SCOPE, PROMPT)
+            hit = await cache.lookup(KEY)
             timings.append((time.perf_counter() - started) * 1000)
             served = bool(hit and hit.text == "живой ответ")
 

@@ -103,21 +103,21 @@ def test_the_prose_quotes_the_measured_number(
 
 #: (probe file, field, spelling, where the prose quotes it)
 PROBE_CLAIMS: list[tuple[str, str, str, str]] = [
-    ("budget_local_1", "served_200", "89", "итерация 11: одна реплика, local"),
-    ("budget_local_1", "billed", "$0.005410", "итерация 11: одна реплика, local"),
-    ("budget_local_1", "overspend", "+8.2%", "итерация 11: одна реплика, local"),
-    ("budget_local_2", "served_200", "179", "итерация 11: две реплики, local"),
-    ("budget_local_2", "billed", "$0.011023", "итерация 11: две реплики, local"),
-    ("budget_local_2", "overspend", "+120.5%", "итерация 11 и рецепт в README"),
+    ("budget_local_1", "served_200", "85", "итерация 11: одна реплика, local"),
+    ("budget_local_1", "billed", "$0.005246", "итерация 11: одна реплика, local"),
+    ("budget_local_1", "overspend", "+4.9%", "итерация 11: одна реплика, local"),
+    ("budget_local_2", "served_200", "168", "итерация 11: две реплики, local"),
+    ("budget_local_2", "billed", "$0.010396", "итерация 11: две реплики, local"),
+    ("budget_local_2", "overspend", "+107.9%", "итерация 11 и рецепт в README"),
     ("budget_shared_1", "served_200", "84", "итерация 11: одна реплика, shared"),
     ("budget_shared_1", "billed", "$0.005156", "итерация 11: одна реплика, shared"),
     ("budget_shared_1", "overspend", "+3.1%", "итерация 11: одна реплика, shared"),
-    ("budget_shared_2", "served_200", "87", "итерация 11: две реплики, shared"),
-    ("budget_shared_2", "billed", "$0.005329", "итерация 11: две реплики, shared"),
-    ("budget_shared_2", "overspend", "+6.6%", "итерация 11 и рецепт в README"),
-    ("budget_shared_2_conservative", "served_200", "51", "итерация 11: консервативная оценка"),
-    ("budget_shared_2_conservative", "billed", "$0.003165", "итерация 11: консервативная оценка"),
-    ("budget_shared_2_conservative", "overspend", "−36.7%", "итерация 11: цена запаса"),
+    ("budget_shared_2", "served_200", "86", "итерация 11: две реплики, shared"),
+    ("budget_shared_2", "billed", "$0.005280", "итерация 11: две реплики, shared"),
+    ("budget_shared_2", "overspend", "+5.6%", "итерация 11 и рецепт в README"),
+    ("budget_shared_2_conservative", "served_200", "45", "итерация 11: консервативная оценка"),
+    ("budget_shared_2_conservative", "billed", "$0.002788", "итерация 11: консервативная оценка"),
+    ("budget_shared_2_conservative", "overspend", "−44.2%", "итерация 11: цена запаса"),
     ("ratelimit_local_2", "served_200", "103", "лимит на нескольких репликах: local"),
     ("ratelimit_local_2", "throttled_429", "497", "лимит на нескольких репликах: local"),
     ("ratelimit_shared_2", "served_200", "63", "лимит на нескольких репликах: shared"),
@@ -306,3 +306,77 @@ def test_every_breaker_probe_still_answered_every_request() -> None:
         assert probe["answered_200"] == probe["requests"], (
             f"{name}: {probe['answered_200']} of {probe['requests']} answered"
         )
+
+
+# -- totals across scenarios, and the README headline ---------------------------
+
+ORIGINAL_SCENARIOS_EXCLUDE = ("capacity_limited",)
+
+
+def total_success(label: str, exclude: tuple[str, ...] = ()) -> float:
+    """Pooled success rate of a build across its scenarios, as the prose reports it."""
+    requests = successes = 0
+    for path in RESULTS.glob(f"{label}__*.json"):
+        run = json.loads(path.read_text())
+        if run["scenario"] in exclude:
+            continue
+        requests += run["results"]["requests"]
+        successes += run["results"]["successes"]
+    return 100 * successes / requests
+
+
+def readme() -> str:
+    return Path("README.md").read_text(encoding="utf-8")
+
+
+#: (label, excluded scenarios, which document, where it is quoted)
+TOTAL_CLAIMS: list[tuple[str, tuple[str, ...], str, str]] = [
+    ("01_baseline", (), "readme", "README: заглавная таблица, наивный шлюз"),
+    ("09_backpressure", (), "readme", "README: заглавная таблица, финальная сборка"),
+    ("03_retries", (), "readme", "README: брейкер сам по себе, было"),
+    ("04_circuit_breaker", (), "readme", "README: брейкер сам по себе, стало"),
+    ("01_baseline", ORIGINAL_SCENARIOS_EXCLUDE, "report", "итерация 1: итог по десяти сценариям"),
+    ("03_retries", ORIGINAL_SCENARIOS_EXCLUDE, "report", "итерации 3 и 4: суммарно"),
+    ("04_circuit_breaker", ORIGINAL_SCENARIOS_EXCLUDE, "report", "итерации 4 и 5: суммарно"),
+    ("05_fallback", ORIGINAL_SCENARIOS_EXCLUDE, "report", "итерация 5: суммарно"),
+    ("03_retries", (), "report", "итерация 3: на всех одиннадцати"),
+]
+
+
+@pytest.mark.parametrize(("label", "exclude", "document", "where"), TOTAL_CLAIMS)
+def test_totals_are_quoted_over_the_scenarios_they_were_computed_on(
+    label: str, exclude: tuple[str, ...], document: str, where: str
+) -> None:
+    """The README once quoted a ten-scenario total next to an eleven-scenario table.
+
+    Both documents now say which set a total covers, and each total is recomputed
+    here from the committed results over exactly that set.
+    """
+    spelling = f"{total_success(label, exclude):.1f}%"
+    text = readme() if document == "readme" else prose()
+    assert spelling in text, f"{label} total over {where} is {spelling}, not quoted"
+
+
+def test_the_readme_headline_table_matches_the_results() -> None:
+    text = readme()
+    naive, final = "01_baseline", "09_backpressure"
+
+    def full_marks(label: str) -> int:
+        return sum(
+            json.loads(p.read_text())["results"]["success_rate"] >= 0.9999
+            for p in RESULTS.glob(f"{label}__*.json")
+        )
+
+    def cost(label: str) -> float:
+        return sum(
+            json.loads(p.read_text())["results"]["cost_usd_server"]
+            for p in RESULTS.glob(f"{label}__*.json")
+        )
+
+    n = len(list(RESULTS.glob(f"{final}__*.json")))
+    assert f"success rate на {n} сценариях" in text
+    assert f"{full_marks(naive)} из {n} | **{full_marks(final)} из {n}**" in text
+    for label, scenario in ((naive, "storm"), (final, "storm"), (naive, "hang"), (final, "hang")):
+        spellings_ = spellings("p95", value(label, scenario, "p95"))
+        assert any(f"{s} мс" in text for s in spellings_), f"{label} {scenario} p95"
+    assert f"${cost(naive):.4f}" in text and f"${cost(final):.4f}" in text

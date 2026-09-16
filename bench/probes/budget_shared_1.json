@@ -8,9 +8,9 @@
   "other": {
     "402": 116
   },
-  "duration_s": 1.29,
-  "offered_rps": 154.8,
-  "served_rps": 65.0,
+  "duration_s": 1.1,
+  "offered_rps": 182.2,
+  "served_rps": 76.5,
   "refused_402": 116,
   "per_gateway": {
     "http://127.0.0.1:8080 200": 84,

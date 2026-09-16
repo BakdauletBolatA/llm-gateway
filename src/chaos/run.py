@@ -95,6 +95,9 @@ async def _worker(
             "messages": [{"role": "user", "content": prompt}],
             "max_tokens": 256,
             "temperature": 0.0,
+            # The harness is a client that asks for caching: the gateway serves
+            # nobody from the cache without an explicit opt-in.
+            "cache": True,
         }
         started = time.perf_counter()
         try:

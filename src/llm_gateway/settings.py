@@ -134,6 +134,17 @@ class RateLimitConfig(ConfigModel):
 
 class CacheConfig(ConfigModel):
     enabled: bool = False
+    #: exact — ответ отдаётся только на тот же вопрос после нормализации регистра,
+    #: пунктуации и пробелов. semantic — ближайший сосед по эмбеддингу выше порога.
+    match: Literal["exact", "semantic"] = "exact"
+    #: Хеш-эмбеддер видит слова, а не смысл: «capital of France» и «capital of Spain»
+    #: у него похожи на 0.775, выше любого порога, отделяющего перефразировки. Поэтому
+    #: semantic на нём запрещён, пока этот флаг явно не включён. Включает его только
+    #: бенчмарк: в его воркладе из 22 заведомо разных тем таких коллизий нет.
+    allow_lexical_semantic: bool = False
+    #: Кэш обслуживает только запросы, где клиент явно передал "cache": true.
+    #: Ответ на чужой вопрос хуже промаха, поэтому по умолчанию согласие не предполагается.
+    require_opt_in: bool = True
     similarity_threshold: float = Field(default=0.93, gt=0.0, le=1.0)
     ttl_s: int = Field(default=900, ge=1)
     max_temperature: float = 0.3
@@ -145,6 +156,23 @@ class CacheConfig(ConfigModel):
     #: что без уборки таблица растёт вечно, а поиск замедляется: замер — 3.8 мс
     #: при пустой таблице против 12.8 мс при 20 000 протухших строк. 0 — выключить.
     sweep_interval_s: float = Field(default=60.0, ge=0.0)
+
+    @model_validator(mode="after")
+    def _lexical_embedder_cannot_match_meaning(self) -> CacheConfig:
+        if (
+            self.enabled
+            and self.match == "semantic"
+            and self.embedder == "hashing"
+            and not self.allow_lexical_semantic
+        ):
+            raise ValueError(
+                "reliability.cache.match=semantic with embedder=hashing serves answers to "
+                "different questions that share most of their words ('capital of France' / "
+                "'capital of Spain' score 0.775). Use match=exact, a real embedder "
+                "(embedder=ollama) with a calibrated threshold, or set "
+                "allow_lexical_semantic=true if this is a benchmark on a controlled workload"
+            )
+        return self
 
 
 class ReliabilityConfig(ConfigModel):

@@ -103,8 +103,8 @@ class _Counter:
 class Reservation:
     """Money committed for one request, to be settled once the cost is known.
 
-    In local mode nothing is written anywhere and this only carries the estimate;
-    in shared mode `scopes` names the rows that were charged.
+    In local mode the estimate is added to the in-process counters; in shared mode
+    `scopes` names the Postgres rows that were charged.
     """
 
     amount: float = 0.0
@@ -265,7 +265,12 @@ class BudgetTracker:
             return Reservation()
         self._roll_period_if_needed()
         if not self.shared:
+            # Check and charge with no await in between: on one event loop that makes
+            # the pair atomic, so concurrent requests each see the estimates already
+            # committed by the others. Checking without charging let every request in
+            # a burst pass against the same stale total.
             self.check(estimated_cost_usd, api_key_id)
+            self._adjust_local(estimated_cost_usd, api_key_id)
             return Reservation(amount=estimated_cost_usd, api_key_id=api_key_id)
 
         key_limit = self._limit_for(api_key_id)
@@ -308,6 +313,7 @@ class BudgetTracker:
             self._reserve_errors += 1
             logger.exception("budget reservation failed; falling back to the local counters")
             self.check(estimated_cost_usd, api_key_id)
+            self._adjust_local(estimated_cost_usd, api_key_id)
             return Reservation(amount=estimated_cost_usd, api_key_id=api_key_id)
 
         return Reservation(
@@ -326,9 +332,11 @@ class BudgetTracker:
         if reservation.settled:  # pragma: no cover - the router settles exactly once
             return
         reservation.settled = True
-        self.record_spend(actual_cost_usd, reservation.api_key_id)
         if not reservation.shared:
+            # The estimate is already on the counter; replace it with what was spent.
+            self._adjust_local(actual_cost_usd - reservation.amount, reservation.api_key_id)
             return
+        self.record_spend(actual_cost_usd, reservation.api_key_id)
 
         delta = actual_cost_usd - reservation.amount
         if abs(delta) < 1e-12:
@@ -346,6 +354,13 @@ class BudgetTracker:
             # the next refresh re-reads the row either way.
             self._reserve_errors += 1
             logger.exception("budget settlement failed; the reservation stays as committed")
+
+    def _adjust_local(self, delta_usd: float, api_key_id: str | None) -> None:
+        self._roll_period_if_needed()
+        self._global.local = max(0.0, self._global.local + delta_usd)
+        counter = self._counter_for(api_key_id)
+        if counter is not None:
+            counter.local = max(0.0, counter.local + delta_usd)
 
     def record_spend(self, cost_usd: float, api_key_id: str | None = None) -> None:
         if cost_usd <= 0:

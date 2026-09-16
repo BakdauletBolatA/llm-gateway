@@ -4,27 +4,27 @@
     "http://127.0.0.1:8082"
   ],
   "requests": 200,
-  "served_200": 179,
+  "served_200": 168,
   "throttled_429": 0,
   "other": {
-    "402": 21
+    "402": 32
   },
-  "duration_s": 1.02,
-  "offered_rps": 195.1,
-  "served_rps": 174.7,
-  "refused_402": 21,
+  "duration_s": 0.89,
+  "offered_rps": 225.3,
+  "served_rps": 189.2,
+  "refused_402": 32,
   "per_gateway": {
-    "http://127.0.0.1:8080 200": 90,
-    "http://127.0.0.1:8080 402": 10,
-    "http://127.0.0.1:8082 200": 89,
-    "http://127.0.0.1:8082 402": 11
+    "http://127.0.0.1:8080 200": 87,
+    "http://127.0.0.1:8080 402": 13,
+    "http://127.0.0.1:8082 200": 81,
+    "http://127.0.0.1:8082 402": 19
   },
   "usage": {
-    "cost_usd_recorded": 0.011023,
-    "served_recorded": 179,
+    "cost_usd_recorded": 0.010396,
+    "served_recorded": 168,
     "budget_scope": "local",
     "budget_limit_usd": 0.005,
-    "budget_spent_usd": 0.011023,
-    "overspend_pct": 120.5
+    "budget_spent_usd": 0.010396,
+    "overspend_pct": 107.9
   }
 }

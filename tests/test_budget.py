@@ -100,6 +100,69 @@ def test_database_view_wins_when_it_is_ahead_of_the_local_counter() -> None:
         budget.check(0.1)
 
 
+# -- local reservations: a burst on one replica ---------------------------------
+
+
+async def test_a_local_reservation_is_charged_before_the_provider_is_called() -> None:
+    budget = tracker(limit=1.0)
+    reservation = await budget.reserve(0.3)
+    assert budget.snapshot().spent_usd == pytest.approx(0.3), "the estimate must count now"
+    await budget.settle(reservation, 0.25)
+    assert budget.snapshot().spent_usd == pytest.approx(0.25)
+
+
+async def test_a_failed_local_request_gives_its_estimate_back() -> None:
+    budget = tracker(limit=1.0)
+    reservation = await budget.reserve(0.4)
+    await budget.settle(reservation, 0.0)
+    assert budget.snapshot().spent_usd == pytest.approx(0.0)
+
+
+async def test_concurrent_local_requests_never_cross_the_limit() -> None:
+    """Twenty requests in flight at once against room for ten.
+
+    check() used to compare each request against the total spent so far without
+    adding its own estimate, and spend was only recorded when the provider
+    answered. Every request in the burst saw the same total and all twenty went
+    through — the single-replica overspend the probes measured.
+    """
+    budget = tracker(limit=1.0)
+    admitted = 0
+    refused = 0
+    in_flight = asyncio.Event()
+
+    async def one_request() -> None:
+        nonlocal admitted, refused
+        try:
+            reservation = await budget.reserve(0.1)
+        except BudgetExceededError:
+            refused += 1
+            return
+        admitted += 1
+        await in_flight.wait()  # the provider call: every request is still in flight
+        await budget.settle(reservation, 0.1)
+
+    tasks = [asyncio.create_task(one_request()) for _ in range(20)]
+    await asyncio.sleep(0)
+    await asyncio.sleep(0)
+    in_flight.set()
+    await asyncio.gather(*tasks)
+
+    assert admitted == 10
+    assert refused == 10
+    assert budget.snapshot().spent_usd <= 1.0 + 1e-9
+
+
+async def test_a_per_key_local_limit_is_reserved_too() -> None:
+    budget = tracker(
+        limit=10.0, keys=[{"id": "k", "key": "sk-kkkkkkkkkkkkkkkkkkkk", "budget_limit_usd": 0.25}]
+    )
+    first = await budget.reserve(0.2, "k")
+    with pytest.raises(BudgetExceededError):
+        await budget.reserve(0.1, "k")
+    await budget.settle(first, 0.2)
+
+
 # -- the shared counter: one limit for the whole deployment --------------------
 
 
