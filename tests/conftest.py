@@ -132,15 +132,47 @@ async def stack(gateway_settings: Settings, mock_app: FastAPI) -> AsyncIterator[
         yield running
 
 
-@pytest_asyncio.fixture
-async def cache_stack(mock_app: FastAPI) -> AsyncIterator[dict[str, Any]]:
-    """Only the semantic cache is on, so hits and misses are unambiguous."""
+CACHE_TENANT_KEYS = {
+    "tenant-a": "sk-cache-tenant-aaaaaaaaaaaa",
+    "tenant-b": "sk-cache-tenant-bbbbbbbbbbbb",
+}
+
+
+def cache_settings(cache: dict[str, Any], *, with_auth: bool = False) -> Settings:
+    """Only the cache is on, so hits and misses are unambiguous."""
     settings = build_settings(
+        {**ALL_MECHANISMS_OFF, "cache": {"enabled": True, "ttl_s": 900, **cache}}
+    )
+    if not with_auth:
+        return settings
+    return Settings.model_validate(
         {
-            **ALL_MECHANISMS_OFF,
-            "cache": {"enabled": True, "similarity_threshold": 0.60, "ttl_s": 900},
+            **settings.model_dump(),
+            "auth": {"keys": [{"id": k, "key": v} for k, v in CACHE_TENANT_KEYS.items()]},
         }
     )
+
+
+@pytest_asyncio.fixture
+async def cache_stack(mock_app: FastAPI) -> AsyncIterator[dict[str, Any]]:
+    """The production default: exact matching, opt-in required."""
+    async with running_stack(cache_settings({"match": "exact"}), mock_app) as running:
+        yield running
+
+
+@pytest_asyncio.fixture
+async def lexical_cache_stack(mock_app: FastAPI) -> AsyncIterator[dict[str, Any]]:
+    """The matcher the benchmark measured: hashing embedder, semantic, threshold 0.60."""
+    settings = cache_settings(
+        {"match": "semantic", "allow_lexical_semantic": True, "similarity_threshold": 0.60}
+    )
+    async with running_stack(settings, mock_app) as running:
+        yield running
+
+
+@pytest_asyncio.fixture
+async def tenant_cache_stack(mock_app: FastAPI) -> AsyncIterator[dict[str, Any]]:
+    settings = cache_settings({"match": "exact"}, with_auth=True)
     async with running_stack(settings, mock_app) as running:
         yield running
 

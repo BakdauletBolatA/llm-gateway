@@ -3,25 +3,25 @@
     "http://127.0.0.1:8080"
   ],
   "requests": 200,
-  "served_200": 89,
+  "served_200": 85,
   "throttled_429": 0,
   "other": {
-    "402": 111
+    "402": 115
   },
-  "duration_s": 1.11,
-  "offered_rps": 180.9,
-  "served_rps": 80.5,
-  "refused_402": 111,
+  "duration_s": 0.87,
+  "offered_rps": 230.8,
+  "served_rps": 98.1,
+  "refused_402": 115,
   "per_gateway": {
-    "http://127.0.0.1:8080 200": 89,
-    "http://127.0.0.1:8080 402": 111
+    "http://127.0.0.1:8080 200": 85,
+    "http://127.0.0.1:8080 402": 115
   },
   "usage": {
-    "cost_usd_recorded": 0.00541,
-    "served_recorded": 89,
+    "cost_usd_recorded": 0.005246,
+    "served_recorded": 85,
     "budget_scope": "local",
     "budget_limit_usd": 0.005,
-    "budget_spent_usd": 0.00541,
-    "overspend_pct": 8.2
+    "budget_spent_usd": 0.005246,
+    "overspend_pct": 4.9
   }
 }

@@ -275,13 +275,18 @@ class Orchestrator:
                 "check providers.*.enabled in the config"
             )
 
-        prompt = request.prompt_text()
-        scope = SemanticCache.scope_for(route_name, chain[0].model)
+        cache_key = SemanticCache.key_for(
+            route=route_name,
+            model=chain[0].model,
+            tenant=api_key_id,
+            context=request.context_text(),
+            query=request.user_text(),
+        )
         cacheable = self.cache.enabled_for(request.temperature, request.cache)
 
         # 1. Cache. A hit costs nothing, so it is served even when the budget is spent.
         if cacheable:
-            hit = await self.cache.lookup(scope, prompt)
+            hit = await self.cache.lookup(cache_key)
             if hit is not None:
                 return ExecutionResult(
                     text=hit.text,
@@ -334,8 +339,7 @@ class Orchestrator:
 
             if cacheable:
                 self.cache.store_later(
-                    scope=scope,
-                    prompt=prompt,
+                    key=cache_key,
                     response_text=response.text,
                     provider=hop.provider,
                     model=hop.model,
