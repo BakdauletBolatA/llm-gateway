@@ -32,8 +32,8 @@ from typing import Any
 
 from sqlalchemy import delete, select, update
 
-from llm_gateway.cache.embedder import Embedder, normalise
-from llm_gateway.db.models import SemanticCacheEntry
+from llm_gateway.cache.embedder import Embedder, fit_to_column, normalise
+from llm_gateway.db.models import EMBEDDING_COLUMN_DIM, SemanticCacheEntry
 from llm_gateway.db.session import Database
 from llm_gateway.settings import CacheConfig
 
@@ -124,7 +124,9 @@ class SemanticCache:
                         return None
                     similarity = 1.0
                 else:
-                    vector = await self.embedder.embed(key.query)
+                    vector = fit_to_column(
+                        await self.embedder.embed(key.query), EMBEDDING_COLUMN_DIM
+                    )
                     distance = SemanticCacheEntry.embedding.cosine_distance(vector)
                     rows = await session.execute(
                         select(SemanticCacheEntry, distance.label("distance"))
@@ -177,7 +179,7 @@ class SemanticCache:
     ) -> None:
         try:
             scope, prompt = key.scope, key.query
-            vector = await self.embedder.embed(prompt)
+            vector = fit_to_column(await self.embedder.embed(prompt), EMBEDDING_COLUMN_DIM)
             expires_at = datetime.now(UTC) + timedelta(seconds=self.config.ttl_s)
             # Normalised, so the exact matcher and the duplicate check below agree on
             # what "the same question" is.

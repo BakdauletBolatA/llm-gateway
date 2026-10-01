@@ -18,6 +18,7 @@ from sqlalchemy import text
 
 from llm_gateway.cache.embedder import HashingEmbedder, cosine_similarity
 from llm_gateway.cache.store import CacheKey
+from llm_gateway.db.models import EMBEDDING_COLUMN_DIM
 from llm_gateway.settings import CacheConfig
 from tests.conftest import CACHE_TENANT_KEYS
 
@@ -361,7 +362,7 @@ async def test_the_sweeper_removes_only_expired_entries(cache_stack: dict[str, A
                     " created_at, expires_at, hits) VALUES ('sweep-test', :h, 'dead', :v,"
                     " 'dead', 'mock_primary', 'm', 1, 1, 0, now(), now() - interval '1 second', 0)"
                 ),
-                {"h": f"dead{index}", "v": str([0.01 * index] * 256)},
+                {"h": f"dead{index}", "v": str([0.01 * index] * EMBEDDING_COLUMN_DIM)},
             )
         await session.commit()
 

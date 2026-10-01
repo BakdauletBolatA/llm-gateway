@@ -150,8 +150,10 @@ class CacheConfig(ConfigModel):
     max_temperature: float = 0.3
     embedding_dim: int = Field(default=256, ge=16, le=2000)
     candidate_limit: int = Field(default=5, ge=1)
-    embedder: Literal["hashing", "ollama"] = "hashing"
+    embedder: Literal["hashing", "ollama", "sentence-transformers"] = "hashing"
     ollama_embed_model: str = "nomic-embed-text"
+    #: Для embedder: sentence-transformers. Размерность 384 — у этой модели.
+    sentence_transformer_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     #: Как часто удалять протухшие записи. TTL только фильтрует их в выдаче, так
     #: что без уборки таблица растёт вечно, а поиск замедляется: замер — 3.8 мс
     #: при пустой таблице против 12.8 мс при 20 000 протухших строк. 0 — выключить.
@@ -169,7 +171,7 @@ class CacheConfig(ConfigModel):
                 "reliability.cache.match=semantic with embedder=hashing serves answers to "
                 "different questions that share most of their words ('capital of France' / "
                 "'capital of Spain' score 0.775). Use match=exact, a real embedder "
-                "(embedder=ollama) with a calibrated threshold, or set "
+                "(embedder=sentence-transformers) with a calibrated threshold, or set "
                 "allow_lexical_semantic=true if this is a benchmark on a controlled workload"
             )
         return self

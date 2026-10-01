@@ -18,9 +18,15 @@ from sqlalchemy import text as sql_text
 
 from llm_gateway import observability
 from llm_gateway.budget import BudgetTracker, period_start
-from llm_gateway.cache.embedder import Embedder, HashingEmbedder, OllamaEmbedder
+from llm_gateway.cache.embedder import (
+    Embedder,
+    HashingEmbedder,
+    OllamaEmbedder,
+    SentenceTransformerEmbedder,
+)
 from llm_gateway.cache.store import SemanticCache
 from llm_gateway.db import migrate
+from llm_gateway.db.models import EMBEDDING_COLUMN_DIM
 from llm_gateway.db.recorder import CallRecord, CallRecorder
 from llm_gateway.db.session import Database
 from llm_gateway.errors import AuthenticationError, ErrorKind, GatewayError, ThrottledError
@@ -71,6 +77,13 @@ def _build_embedder(
             provider.base_url, cache_config.ollama_embed_model, cache_config.embedding_dim, client
         )
         return embedder, client
+    if cache_config.embedder == "sentence-transformers":
+        return (
+            SentenceTransformerEmbedder(
+                cache_config.sentence_transformer_model, EMBEDDING_COLUMN_DIM
+            ),
+            None,
+        )
     return HashingEmbedder(cache_config.embedding_dim), None
 
 

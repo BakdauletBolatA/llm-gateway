@@ -26,6 +26,8 @@ dev = [
     "types-PyYAML>=6.0",
 ]
 
+embeddings = ["sentence-transformers>=3.0"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
