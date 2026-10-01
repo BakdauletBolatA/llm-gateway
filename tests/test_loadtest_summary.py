@@ -62,3 +62,59 @@ def test_no_kill_means_no_failover_section() -> None:
 def test_an_empty_run_does_not_divide_by_zero() -> None:
     result = summarise([], duration_s=5.0)
     assert result["requests"] == 0 and result["success_rate"] == 0.0
+
+
+aggregate_runs = summarise_module.aggregate_runs
+
+
+def run_summary(
+    rps: float, p50: float, ok: float = 1.0, failed: int = 0, first: float = 1.0
+) -> dict[str, Any]:
+    return {
+        "requests_per_s": rps,
+        "success_rate": ok,
+        "latency_ms": {"p50": p50, "p95": p50 * 1.5, "p99": p50 * 2},
+        "failover": {
+            "failed_requests_after_kill": failed,
+            "seconds_to_first_success_from_other_provider": first,
+        },
+    }
+
+
+def test_the_aggregate_reports_the_median_and_the_full_range() -> None:
+    runs = [run_summary(1.0, 4000), run_summary(0.9, 4400), run_summary(1.1, 3800)]
+    result = aggregate_runs(runs)
+    assert result["runs"] == 3
+    assert result["requests_per_s"] == {"min": 0.9, "median": 1.0, "max": 1.1}
+    assert result["latency_ms"]["p50"] == {"min": 3800, "median": 4000, "max": 4400}
+    assert result["latency_ms"]["p95"]["max"] == 6600.0
+
+
+def test_an_even_number_of_runs_uses_the_mean_of_the_middle_two() -> None:
+    result = aggregate_runs([run_summary(1.0, 100), run_summary(2.0, 300)])
+    assert result["requests_per_s"]["median"] == 1.5
+    assert result["latency_ms"]["p50"]["median"] == 200
+
+
+def test_failover_figures_are_aggregated_only_when_every_run_had_a_kill() -> None:
+    kill = aggregate_runs(
+        [run_summary(1.0, 1, failed=0, first=1.1), run_summary(1.0, 1, failed=2, first=3.0)]
+    )
+    assert kill["failover"]["failed_requests_after_kill"] == {"min": 0, "median": 1.0, "max": 2}
+    assert kill["failover"]["seconds_to_first_success_from_other_provider"]["max"] == 3.0
+    steady = [{k: v for k, v in run_summary(1.0, 1).items() if k != "failover"}]
+    assert "failover" not in aggregate_runs(steady)
+
+
+def test_a_run_that_never_saw_another_provider_is_not_averaged_away() -> None:
+    runs = [run_summary(1.0, 1, first=1.1), run_summary(1.0, 1, first=None)]  # type: ignore[arg-type]
+    result = aggregate_runs(runs)
+    assert result["failover"]["runs_without_a_second_provider"] == 1
+    assert result["failover"]["seconds_to_first_success_from_other_provider"]["max"] == 1.1
+
+
+def test_aggregating_nothing_is_an_error() -> None:
+    import pytest
+
+    with pytest.raises(ValueError, match="no runs"):
+        aggregate_runs([])

@@ -98,32 +98,60 @@ def cache_table() -> str:
     )
 
 
+def _spread(value: dict[str, float], fmt: Any) -> str:
+    return f"{fmt(value['median'])} ({fmt(value['min'])}-{fmt(value['max'])})"
+
+
 def load_table() -> str:
+    """One row per backend and scenario: repeated runs when there are any, else the single run."""
     rows = []
     for target, backend in (("mock", "mock provider"), ("live", "live qwen2.5:0.5b, CPU")):
         for scenario in ("steady", "kill"):
-            path = REPORTS / f"loadtest_{target}_{scenario}.json"
-            if not path.exists():
+            repeats = REPORTS / f"loadtest_{target}_{scenario}_repeats.json"
+            single = REPORTS / f"loadtest_{target}_{scenario}.json"
+            if repeats.exists():
+                report = load(repeats)
+                a = report["aggregate"]
+                runs = f"{a['runs']}"
+                rps = _spread(a["requests_per_s"], lambda v: f"{v:.2f}")
+                p50, p95, p99 = (_spread(a["latency_ms"][k], ms) for k in ("p50", "p95", "p99"))
+                success = _spread(a["success_rate"], pct)
+                extra = ""
+                if "failover" in a:
+                    f = a["failover"]
+                    first = f["seconds_to_first_success_from_other_provider"]
+                    extra = (
+                        f"failed after the kill: {_spread(f['failed_requests_after_kill'], str)}"
+                        + (
+                            f"; first answer from the other server: {_spread(first, str)} s"
+                            if first
+                            else ""
+                        )
+                    )
+            elif single.exists():
+                report = load(single)
+                r = report["results"]
+                lat = r["latency_ms"]
+                runs, rps = "1", f"{r['requests_per_s']}"
+                p50, p95, p99 = ms(lat["p50"]), ms(lat["p95"]), ms(lat["p99"])
+                success = pct(r["success_rate"])
+                extra = ""
+                if scenario == "kill":
+                    f = r["failover"]
+                    extra = (
+                        f"{f['failed_requests_after_kill']} failed after the kill; first answer "
+                        f"from the other server after "
+                        f"{f['seconds_to_first_success_from_other_provider']} s"
+                    )
+            else:
                 continue
-            report = load(path)
-            r = report["results"]
-            lat = r["latency_ms"]
-            extra = ""
-            if scenario == "kill":
-                f = r["failover"]
-                extra = (
-                    f"{f['failed_requests_after_kill']} failed after the kill; first answer from "
-                    f"the other server after {f['seconds_to_first_success_from_other_provider']} s"
-                )
             rows.append(
-                f"| {backend} | {scenario} | {report['users']} | {r['requests']} | "
-                f"{r['requests_per_s']} | {ms(lat['p50'])} | {ms(lat['p95'])} | "
-                f"{ms(lat['p99'])} | {pct(r['success_rate'])} | {extra} |"
+                f"| {backend} | {scenario} | {report['users']} | {runs} | {rps} | {p50} | {p95} | "
+                f"{p99} | {success} | {extra} |"
             )
     return "\n".join(
         [
-            "| backend | scenario | users | requests | req/s | p50 | p95 | p99 | success "
-            "| failover |",
+            "| backend | scenario | users | runs | req/s | p50 | p95 | p99 | success | failover |",
             "|---|---|---|---|---|---|---|---|---|---|",
             *rows,
         ]
@@ -184,7 +212,8 @@ def render() -> str:
             cache_table(),
             "",
             "**Load test** — closed loop, `max_tokens` 64 "
-            "([`loadtest/run.py`](loadtest/run.py)). *kill* stops the primary backend halfway:",
+            "([`loadtest/run.py`](loadtest/run.py)). *kill* stops the primary backend halfway. "
+            "With several runs a cell is the median, with the minimum and maximum in brackets:",
             "",
             load_table(),
             "",

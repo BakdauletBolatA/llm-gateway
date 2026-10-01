@@ -1,0 +1,356 @@
+{
+  "target": "live",
+  "scenario": "kill",
+  "route": "live-local",
+  "backend": "qwen2.5:0.5b",
+  "users": 4,
+  "max_tokens": 64,
+  "repeats": 5,
+  "pause_s": 20,
+  "git_sha": "c6f439c",
+  "environment": {
+    "platform": "macOS-15.7.9-arm64-arm-64bit",
+    "cpu_count": 8,
+    "python": "3.12.14"
+  },
+  "aggregate": {
+    "runs": 5,
+    "requests_per_s": {
+      "min": 0.61,
+      "median": 0.64,
+      "max": 0.78
+    },
+    "success_rate": {
+      "min": 1.0,
+      "median": 1.0,
+      "max": 1.0
+    },
+    "latency_ms": {
+      "p50": {
+        "min": 4619.9,
+        "median": 5881.8,
+        "max": 6609.4
+      },
+      "p95": {
+        "min": 7123.9,
+        "median": 7936.8,
+        "max": 9092.1
+      },
+      "p99": {
+        "min": 8675.9,
+        "median": 10801.6,
+        "max": 11797.6
+      }
+    },
+    "failover": {
+      "failed_requests_after_kill": {
+        "min": 0,
+        "median": 0,
+        "max": 0
+      },
+      "seconds_to_first_success_from_other_provider": {
+        "min": 0.4,
+        "median": 1.7,
+        "max": 2.2
+      },
+      "runs_without_a_second_provider": 0
+    }
+  },
+  "runs": [
+    {
+      "started_at": "2026-10-01T20:42:21.620897+00:00",
+      "duration_s": 90.7,
+      "host_load_average_1m_before": 22.6,
+      "results": {
+        "requests": 65,
+        "success_rate": 1.0,
+        "requests_per_s": 0.72,
+        "latency_ms": {
+          "p50": 5234.4,
+          "p95": 7123.9,
+          "p99": 10801.6
+        },
+        "latency_ms_all_requests": {
+          "p50": 5234.4,
+          "p95": 7123.9,
+          "p99": 10801.6
+        },
+        "status_counts": {
+          "200": 65
+        },
+        "provider_share": {
+          "ollama": 0.4769,
+          "ollama_secondary": 0.5231
+        },
+        "before_kill": {
+          "requests": 35,
+          "success_rate": 1.0,
+          "requests_per_s": 0.78,
+          "latency_ms": {
+            "p50": 5539.1,
+            "p95": 7550.4,
+            "p99": 10801.6
+          },
+          "provider_share": {
+            "ollama": 0.8857,
+            "ollama_secondary": 0.1143
+          }
+        },
+        "after_kill": {
+          "requests": 30,
+          "success_rate": 1.0,
+          "requests_per_s": 0.66,
+          "latency_ms": {
+            "p50": 5106.6,
+            "p95": 6311.8,
+            "p99": 6709.3
+          },
+          "provider_share": {
+            "ollama_secondary": 1.0
+          }
+        },
+        "failover": {
+          "provider_killed": "ollama",
+          "failed_requests_after_kill": 0,
+          "seconds_to_first_success_from_other_provider": 0.4
+        }
+      }
+    },
+    {
+      "started_at": "2026-10-01T20:44:13.806797+00:00",
+      "duration_s": 90.7,
+      "host_load_average_1m_before": 14.63,
+      "results": {
+        "requests": 58,
+        "success_rate": 1.0,
+        "requests_per_s": 0.64,
+        "latency_ms": {
+          "p50": 6045.5,
+          "p95": 7377.0,
+          "p99": 11797.6
+        },
+        "latency_ms_all_requests": {
+          "p50": 6045.5,
+          "p95": 7377.0,
+          "p99": 11797.6
+        },
+        "status_counts": {
+          "200": 58
+        },
+        "provider_share": {
+          "ollama": 0.4828,
+          "ollama_secondary": 0.5172
+        },
+        "before_kill": {
+          "requests": 32,
+          "success_rate": 1.0,
+          "requests_per_s": 0.71,
+          "latency_ms": {
+            "p50": 6050.9,
+            "p95": 7380.4,
+            "p99": 11797.6
+          },
+          "provider_share": {
+            "ollama": 0.875,
+            "ollama_secondary": 0.125
+          }
+        },
+        "after_kill": {
+          "requests": 26,
+          "success_rate": 1.0,
+          "requests_per_s": 0.57,
+          "latency_ms": {
+            "p50": 5907.1,
+            "p95": 7009.9,
+            "p99": 7013.5
+          },
+          "provider_share": {
+            "ollama_secondary": 1.0
+          }
+        },
+        "failover": {
+          "provider_killed": "ollama",
+          "failed_requests_after_kill": 0,
+          "seconds_to_first_success_from_other_provider": 1.9
+        }
+      }
+    },
+    {
+      "started_at": "2026-10-01T20:46:05.956661+00:00",
+      "duration_s": 90.7,
+      "host_load_average_1m_before": 19.26,
+      "results": {
+        "requests": 55,
+        "success_rate": 1.0,
+        "requests_per_s": 0.61,
+        "latency_ms": {
+          "p50": 6609.4,
+          "p95": 8942.7,
+          "p99": 11349.1
+        },
+        "latency_ms_all_requests": {
+          "p50": 6609.4,
+          "p95": 8942.7,
+          "p99": 11349.1
+        },
+        "status_counts": {
+          "200": 55
+        },
+        "provider_share": {
+          "ollama": 0.5273,
+          "ollama_secondary": 0.4727
+        },
+        "before_kill": {
+          "requests": 33,
+          "success_rate": 1.0,
+          "requests_per_s": 0.73,
+          "latency_ms": {
+            "p50": 6389.3,
+            "p95": 9257.5,
+            "p99": 11349.1
+          },
+          "provider_share": {
+            "ollama": 0.8788,
+            "ollama_secondary": 0.1212
+          }
+        },
+        "after_kill": {
+          "requests": 22,
+          "success_rate": 1.0,
+          "requests_per_s": 0.48,
+          "latency_ms": {
+            "p50": 6839.5,
+            "p95": 7205.8,
+            "p99": 7377.4
+          },
+          "provider_share": {
+            "ollama_secondary": 1.0
+          }
+        },
+        "failover": {
+          "provider_killed": "ollama",
+          "failed_requests_after_kill": 0,
+          "seconds_to_first_success_from_other_provider": 1.7
+        }
+      }
+    },
+    {
+      "started_at": "2026-10-01T20:47:57.903641+00:00",
+      "duration_s": 90.7,
+      "host_load_average_1m_before": 26.85,
+      "results": {
+        "requests": 58,
+        "success_rate": 1.0,
+        "requests_per_s": 0.64,
+        "latency_ms": {
+          "p50": 5881.8,
+          "p95": 9092.1,
+          "p99": 10285.6
+        },
+        "latency_ms_all_requests": {
+          "p50": 5881.8,
+          "p95": 9092.1,
+          "p99": 10285.6
+        },
+        "status_counts": {
+          "200": 58
+        },
+        "provider_share": {
+          "ollama": 0.4828,
+          "ollama_secondary": 0.5172
+        },
+        "before_kill": {
+          "requests": 32,
+          "success_rate": 1.0,
+          "requests_per_s": 0.71,
+          "latency_ms": {
+            "p50": 5896.4,
+            "p95": 10128.7,
+            "p99": 10285.6
+          },
+          "provider_share": {
+            "ollama": 0.875,
+            "ollama_secondary": 0.125
+          }
+        },
+        "after_kill": {
+          "requests": 26,
+          "success_rate": 1.0,
+          "requests_per_s": 0.57,
+          "latency_ms": {
+            "p50": 5750.9,
+            "p95": 7302.2,
+            "p99": 7410.3
+          },
+          "provider_share": {
+            "ollama_secondary": 1.0
+          }
+        },
+        "failover": {
+          "provider_killed": "ollama",
+          "failed_requests_after_kill": 0,
+          "seconds_to_first_success_from_other_provider": 2.2
+        }
+      }
+    },
+    {
+      "started_at": "2026-10-01T20:49:50.001121+00:00",
+      "duration_s": 90.7,
+      "host_load_average_1m_before": 20.05,
+      "results": {
+        "requests": 71,
+        "success_rate": 1.0,
+        "requests_per_s": 0.78,
+        "latency_ms": {
+          "p50": 4619.9,
+          "p95": 7936.8,
+          "p99": 8675.9
+        },
+        "latency_ms_all_requests": {
+          "p50": 4619.9,
+          "p95": 7936.8,
+          "p99": 8675.9
+        },
+        "status_counts": {
+          "200": 71
+        },
+        "provider_share": {
+          "ollama": 0.4085,
+          "ollama_secondary": 0.5915
+        },
+        "before_kill": {
+          "requests": 33,
+          "success_rate": 1.0,
+          "requests_per_s": 0.73,
+          "latency_ms": {
+            "p50": 6014.7,
+            "p95": 8384.7,
+            "p99": 8675.9
+          },
+          "provider_share": {
+            "ollama": 0.8788,
+            "ollama_secondary": 0.1212
+          }
+        },
+        "after_kill": {
+          "requests": 38,
+          "success_rate": 1.0,
+          "requests_per_s": 0.83,
+          "latency_ms": {
+            "p50": 4237.1,
+            "p95": 5865.2,
+            "p99": 6086.4
+          },
+          "provider_share": {
+            "ollama_secondary": 1.0
+          }
+        },
+        "failover": {
+          "provider_killed": "ollama",
+          "failed_requests_after_kill": 0,
+          "seconds_to_first_success_from_other_provider": 1.5
+        }
+      }
+    }
+  ]
+}

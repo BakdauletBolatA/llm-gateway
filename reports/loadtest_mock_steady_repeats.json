@@ -1,0 +1,178 @@
+{
+  "target": "mock",
+  "scenario": "steady",
+  "route": "mock-two-hop",
+  "backend": "mock provider",
+  "users": 4,
+  "max_tokens": 64,
+  "repeats": 5,
+  "pause_s": 20,
+  "git_sha": "c6f439c",
+  "environment": {
+    "platform": "macOS-15.7.9-arm64-arm-64bit",
+    "cpu_count": 8,
+    "python": "3.12.14"
+  },
+  "aggregate": {
+    "runs": 5,
+    "requests_per_s": {
+      "min": 43.45,
+      "median": 43.85,
+      "max": 44.54
+    },
+    "success_rate": {
+      "min": 1.0,
+      "median": 1.0,
+      "max": 1.0
+    },
+    "latency_ms": {
+      "p50": {
+        "min": 88.8,
+        "median": 90.0,
+        "max": 90.8
+      },
+      "p95": {
+        "min": 126.4,
+        "median": 127.4,
+        "max": 128.2
+      },
+      "p99": {
+        "min": 131.2,
+        "median": 133.7,
+        "max": 135.1
+      }
+    }
+  },
+  "runs": [
+    {
+      "started_at": "2026-10-01T20:52:30.046847+00:00",
+      "duration_s": 60.3,
+      "host_load_average_1m_before": 8.57,
+      "results": {
+        "requests": 2681,
+        "success_rate": 1.0,
+        "requests_per_s": 44.49,
+        "latency_ms": {
+          "p50": 88.8,
+          "p95": 126.4,
+          "p99": 131.2
+        },
+        "latency_ms_all_requests": {
+          "p50": 88.8,
+          "p95": 126.4,
+          "p99": 131.2
+        },
+        "status_counts": {
+          "200": 2681
+        },
+        "provider_share": {
+          "mock_primary": 1.0
+        }
+      }
+    },
+    {
+      "started_at": "2026-10-01T20:53:50.379821+00:00",
+      "duration_s": 60.3,
+      "host_load_average_1m_before": 3.81,
+      "results": {
+        "requests": 2684,
+        "success_rate": 1.0,
+        "requests_per_s": 44.54,
+        "latency_ms": {
+          "p50": 88.9,
+          "p95": 126.5,
+          "p99": 131.6
+        },
+        "latency_ms_all_requests": {
+          "p50": 88.9,
+          "p95": 126.5,
+          "p99": 131.6
+        },
+        "status_counts": {
+          "200": 2684
+        },
+        "provider_share": {
+          "mock_primary": 1.0
+        }
+      }
+    },
+    {
+      "started_at": "2026-10-01T20:55:10.697974+00:00",
+      "duration_s": 60.2,
+      "host_load_average_1m_before": 1.9,
+      "results": {
+        "requests": 2642,
+        "success_rate": 1.0,
+        "requests_per_s": 43.85,
+        "latency_ms": {
+          "p50": 90.0,
+          "p95": 127.4,
+          "p99": 133.7
+        },
+        "latency_ms_all_requests": {
+          "p50": 90.0,
+          "p95": 127.4,
+          "p99": 133.7
+        },
+        "status_counts": {
+          "200": 2642
+        },
+        "provider_share": {
+          "mock_primary": 1.0
+        }
+      }
+    },
+    {
+      "started_at": "2026-10-01T20:56:30.982798+00:00",
+      "duration_s": 60.3,
+      "host_load_average_1m_before": 1.69,
+      "results": {
+        "requests": 2618,
+        "success_rate": 1.0,
+        "requests_per_s": 43.45,
+        "latency_ms": {
+          "p50": 90.8,
+          "p95": 128.2,
+          "p99": 134.5
+        },
+        "latency_ms_all_requests": {
+          "p50": 90.8,
+          "p95": 128.2,
+          "p99": 134.5
+        },
+        "status_counts": {
+          "200": 2618
+        },
+        "provider_share": {
+          "mock_primary": 1.0
+        }
+      }
+    },
+    {
+      "started_at": "2026-10-01T20:57:51.302115+00:00",
+      "duration_s": 60.3,
+      "host_load_average_1m_before": 1.96,
+      "results": {
+        "requests": 2624,
+        "success_rate": 1.0,
+        "requests_per_s": 43.53,
+        "latency_ms": {
+          "p50": 90.4,
+          "p95": 128.2,
+          "p99": 135.1
+        },
+        "latency_ms_all_requests": {
+          "p50": 90.4,
+          "p95": 128.2,
+          "p99": 135.1
+        },
+        "status_counts": {
+          "200": 2624
+        },
+        "provider_share": {
+          "mock_primary": 1.0
+        }
+      }
+    }
+  ]
+}

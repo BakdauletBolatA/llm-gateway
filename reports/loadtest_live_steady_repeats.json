@@ -1,0 +1,178 @@
+{
+  "target": "live",
+  "scenario": "steady",
+  "route": "live-local",
+  "backend": "qwen2.5:0.5b",
+  "users": 4,
+  "max_tokens": 64,
+  "repeats": 5,
+  "pause_s": 20,
+  "git_sha": "c6f439c",
+  "environment": {
+    "platform": "macOS-15.7.9-arm64-arm-64bit",
+    "cpu_count": 8,
+    "python": "3.12.14"
+  },
+  "aggregate": {
+    "runs": 5,
+    "requests_per_s": {
+      "min": 0.52,
+      "median": 0.64,
+      "max": 0.68
+    },
+    "success_rate": {
+      "min": 1.0,
+      "median": 1.0,
+      "max": 1.0
+    },
+    "latency_ms": {
+      "p50": {
+        "min": 5936.6,
+        "median": 6109.5,
+        "max": 6629.2
+      },
+      "p95": {
+        "min": 6954.6,
+        "median": 7537.3,
+        "max": 15536.3
+      },
+      "p99": {
+        "min": 7410.4,
+        "median": 7937.5,
+        "max": 18024.9
+      }
+    }
+  },
+  "runs": [
+    {
+      "started_at": "2026-10-01T20:33:23.376953+00:00",
+      "duration_s": 90.3,
+      "host_load_average_1m_before": 2.92,
+      "results": {
+        "requests": 47,
+        "success_rate": 1.0,
+        "requests_per_s": 0.52,
+        "latency_ms": {
+          "p50": 6629.2,
+          "p95": 15536.3,
+          "p99": 18024.9
+        },
+        "latency_ms_all_requests": {
+          "p50": 6629.2,
+          "p95": 15536.3,
+          "p99": 18024.9
+        },
+        "status_counts": {
+          "200": 47
+        },
+        "provider_share": {
+          "ollama": 1.0
+        }
+      }
+    },
+    {
+      "started_at": "2026-10-01T20:35:14.061118+00:00",
+      "duration_s": 90.3,
+      "host_load_average_1m_before": 19.86,
+      "results": {
+        "requests": 55,
+        "success_rate": 1.0,
+        "requests_per_s": 0.61,
+        "latency_ms": {
+          "p50": 6426.1,
+          "p95": 7537.3,
+          "p99": 7804.3
+        },
+        "latency_ms_all_requests": {
+          "p50": 6426.1,
+          "p95": 7537.3,
+          "p99": 7804.3
+        },
+        "status_counts": {
+          "200": 55
+        },
+        "provider_share": {
+          "ollama": 1.0
+        }
+      }
+    },
+    {
+      "started_at": "2026-10-01T20:37:04.667541+00:00",
+      "duration_s": 90.3,
+      "host_load_average_1m_before": 22.8,
+      "results": {
+        "requests": 59,
+        "success_rate": 1.0,
+        "requests_per_s": 0.65,
+        "latency_ms": {
+          "p50": 5936.6,
+          "p95": 7490.0,
+          "p99": 7937.5
+        },
+        "latency_ms_all_requests": {
+          "p50": 5936.6,
+          "p95": 7490.0,
+          "p99": 7937.5
+        },
+        "status_counts": {
+          "200": 59
+        },
+        "provider_share": {
+          "ollama": 1.0
+        }
+      }
+    },
+    {
+      "started_at": "2026-10-01T20:38:55.306962+00:00",
+      "duration_s": 90.3,
+      "host_load_average_1m_before": 17.85,
+      "results": {
+        "requests": 61,
+        "success_rate": 1.0,
+        "requests_per_s": 0.68,
+        "latency_ms": {
+          "p50": 6109.5,
+          "p95": 6954.6,
+          "p99": 7410.4
+        },
+        "latency_ms_all_requests": {
+          "p50": 6109.5,
+          "p95": 6954.6,
+          "p99": 7410.4
+        },
+        "status_counts": {
+          "200": 61
+        },
+        "provider_share": {
+          "ollama": 1.0
+        }
+      }
+    },
+    {
+      "started_at": "2026-10-01T20:40:45.915514+00:00",
+      "duration_s": 90.3,
+      "host_load_average_1m_before": 14.94,
+      "results": {
+        "requests": 58,
+        "success_rate": 1.0,
+        "requests_per_s": 0.64,
+        "latency_ms": {
+          "p50": 6064.9,
+          "p95": 11770.1,
+          "p99": 12089.8
+        },
+        "latency_ms_all_requests": {
+          "p50": 6064.9,
+          "p95": 11770.1,
+          "p99": 12089.8
+        },
+        "status_counts": {
+          "200": 58
+        },
+        "provider_share": {
+          "ollama": 1.0
+        }
+      }
+    }
+  ]
+}

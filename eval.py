@@ -4,6 +4,7 @@
     python eval.py                      # cache + routing (replayed) + load test on the mock
     python eval.py --only cache         # one measurement
     python eval.py --live               # also re-measure on live local models (slow)
+    python eval.py --live --repeat 5    # five load-test runs per scenario, with the spread
     python eval.py --check              # only verify that README.md matches reports/
 
 What each step needs:
@@ -168,7 +169,7 @@ def routing(live: bool) -> None:
     )
 
 
-def load(live: bool, duration: int) -> None:
+def load(live: bool, duration: int, repeat: int) -> None:
     if not gateway_ready():
         raise SystemExit(
             f"no gateway at {GATEWAY}. Start one with `python eval.py --start-stack`, or run "
@@ -198,6 +199,7 @@ def main() -> int:
     parser.add_argument("--live", action="store_true", help="also measure live local models")
     parser.add_argument("--start-stack", action="store_true", help="docker compose up first")
     parser.add_argument("--duration", type=int, default=60, help="seconds per load scenario")
+    parser.add_argument("--repeat", type=int, default=1, help="load-test runs per scenario")
     parser.add_argument("--check", action="store_true", help="only verify README.md is current")
     args = parser.parse_args()
 
@@ -213,7 +215,7 @@ def main() -> int:
     if "routing" in steps:
         routing(args.live)
     if "load" in steps:
-        load(args.live, args.duration)
+        load(args.live, args.duration, args.repeat)
 
     run("rebuild the README results block", [PY, "eval/readme_table.py"])
     return 0

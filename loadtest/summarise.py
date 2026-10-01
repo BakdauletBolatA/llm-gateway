@@ -77,3 +77,42 @@ def summarise(
         ),
     }
     return result
+
+
+def _range(values: list[float]) -> dict[str, float]:
+    ordered = sorted(values)
+    middle = len(ordered) // 2
+    median = ordered[middle] if len(ordered) % 2 else (ordered[middle - 1] + ordered[middle]) / 2
+    return {"min": ordered[0], "median": median, "max": ordered[-1]}
+
+
+def aggregate_runs(runs: list[dict[str, Any]]) -> dict[str, Any]:
+    """Median and full range across repeated runs of one scenario.
+
+    The range is reported next to the median on purpose: with a handful of runs a
+    median alone hides exactly the spread the repeats were made to show.
+    """
+    if not runs:
+        raise ValueError("no runs to aggregate")
+    result: dict[str, Any] = {
+        "runs": len(runs),
+        "requests_per_s": _range([r["requests_per_s"] for r in runs]),
+        "success_rate": _range([r["success_rate"] for r in runs]),
+        "latency_ms": {
+            name: _range([r["latency_ms"][name] for r in runs]) for name in ("p50", "p95", "p99")
+        },
+    }
+    if all("failover" in r for r in runs):
+        firsts = [
+            r["failover"]["seconds_to_first_success_from_other_provider"]
+            for r in runs
+            if r["failover"]["seconds_to_first_success_from_other_provider"] is not None
+        ]
+        result["failover"] = {
+            "failed_requests_after_kill": _range(
+                [r["failover"]["failed_requests_after_kill"] for r in runs]
+            ),
+            "seconds_to_first_success_from_other_provider": _range(firsts) if firsts else None,
+            "runs_without_a_second_provider": len(runs) - len(firsts),
+        }
+    return result
