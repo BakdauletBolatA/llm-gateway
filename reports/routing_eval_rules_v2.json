@@ -15,11 +15,11 @@
       "share_to_small": 1.0
     },
     "always_large": {
-      "passed": 47,
-      "pass_rate": 0.94,
+      "passed": 49,
+      "pass_rate": 0.98,
       "pass_rate_ci95": [
-        0.838,
-        0.979
+        0.895,
+        0.996
       ],
       "modeled_cost_usd_per_100": 0.03357,
       "mean_output_tokens": 25.2,
@@ -27,11 +27,11 @@
       "share_to_small": 0.0
     },
     "routed": {
-      "passed": 45,
-      "pass_rate": 0.9,
+      "passed": 47,
+      "pass_rate": 0.94,
       "pass_rate_ci95": [
-        0.786,
-        0.957
+        0.838,
+        0.979
       ],
       "modeled_cost_usd_per_100": 0.0249112,
       "mean_output_tokens": 25.0,
@@ -56,7 +56,7 @@
     },
     "complex": {
       "small": 17,
-      "large": 22,
+      "large": 24,
       "prompts": 25
     }
   },
@@ -76,5 +76,5 @@
     "small": "qwen2.5:0.5b",
     "large": "qwen2.5:3b"
   },
-  "note": "Router rules changed after the first run (percent sign, currency, quantity questions) in response to its failures on this same prompt set: treat as optimistic, not as a held-out result."
+  "note": "Rules v2: percent sign, currency and quantity questions fixed after seeing v1 fail on this same set, and criteria 36/48 corrected. Optimistic, not held out; see routing_heldout.json."
 }
