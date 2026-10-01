@@ -243,6 +243,8 @@ def rescore(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    parser.add_argument("--prompts", type=Path, default=PROMPTS, help="labelled prompt file")
+    parser.add_argument("--answers-out", type=Path, default=REPORTS / "routing_answers.jsonl")
     parser.add_argument("--gateway", default="http://127.0.0.1:8080")
     parser.add_argument("--small-route", default="small-local")
     parser.add_argument("--large-route", default="large-local")
@@ -257,7 +259,7 @@ def main() -> int:
     parser.add_argument("--note", help="free text stored in the report, e.g. how the rules changed")
     args = parser.parse_args()
 
-    prompts = [json.loads(line) for line in PROMPTS.read_text().splitlines() if line.strip()]
+    prompts = [json.loads(line) for line in args.prompts.read_text().splitlines() if line.strip()]
     records = (
         rescore(args.rescore, prompts, args.redecide) if args.rescore else collect(args, prompts)
     )
@@ -279,7 +281,7 @@ def main() -> int:
 
     REPORTS.mkdir(exist_ok=True)
     if not args.rescore:
-        with (REPORTS / "routing_answers.jsonl").open("w") as handle:
+        with args.answers_out.open("w") as handle:
             for record in records:
                 handle.write(json.dumps(record, ensure_ascii=False) + "\n")
     if args.note:

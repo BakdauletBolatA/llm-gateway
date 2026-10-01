@@ -166,3 +166,17 @@ def test_the_corrected_criteria_accept_the_answers_they_wrongly_rejected() -> No
     assert not passes(
         prompts[48]["check"], "```python\ndef largest(nums):\n    return max(nums)\n```"
     )
+
+
+def test_the_held_out_set_is_separate_from_the_tuning_set() -> None:
+    tuning = {
+        json.loads(line)["prompt"]
+        for line in (ROOT / "eval/data/routing_prompts.jsonl").read_text().splitlines()
+    }
+    held = [
+        json.loads(line)
+        for line in (ROOT / "eval/data/routing_prompts_heldout.jsonl").read_text().splitlines()
+    ]
+    assert len(held) == 30
+    assert not tuning & {h["prompt"] for h in held}
+    assert {h["label"] for h in held} == {"simple", "complex"}
