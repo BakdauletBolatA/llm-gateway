@@ -1,0 +1,50 @@
+{"id": 1, "label": "simple", "prompt": "What is the capital of Australia?", "check": {"any": ["canberra"]}}
+{"id": 2, "label": "simple", "prompt": "Which planet is known as the Red Planet?", "check": {"any": ["mars"]}}
+{"id": 3, "label": "simple", "prompt": "Who wrote the play Romeo and Juliet?", "check": {"any": ["shakespeare"]}}
+{"id": 4, "label": "simple", "prompt": "What is the chemical symbol for gold?", "check": {"regex": "\\bAu\\b"}}
+{"id": 5, "label": "simple", "prompt": "How many days are in a leap year?", "check": {"any": ["366"]}}
+{"id": 6, "label": "simple", "prompt": "What language is primarily spoken in Brazil?", "check": {"any": ["portuguese"]}}
+{"id": 7, "label": "simple", "prompt": "What is the largest ocean on Earth?", "check": {"any": ["pacific"]}}
+{"id": 8, "label": "simple", "prompt": "Translate 'good morning' into Spanish.", "check": {"any": ["buenos días", "buenos dias"]}}
+{"id": 9, "label": "simple", "prompt": "What is the opposite of 'ancient'?", "check": {"any": ["modern", "new", "recent"]}}
+{"id": 10, "label": "simple", "prompt": "Name the first month of the year.", "check": {"any": ["january"]}}
+{"id": 11, "label": "simple", "prompt": "What does the abbreviation 'CPU' stand for?", "check": {"any": ["central processing unit"]}}
+{"id": 12, "label": "simple", "prompt": "What is the plural of 'mouse' (the animal)?", "check": {"any": ["mice"]}}
+{"id": 13, "label": "simple", "prompt": "Which continent is Egypt in?", "check": {"any": ["africa"]}}
+{"id": 14, "label": "simple", "prompt": "Is a tomato botanically a fruit or a vegetable?", "check": {"any": ["fruit"]}}
+{"id": 15, "label": "simple", "prompt": "What colour do you get by mixing blue and yellow?", "check": {"any": ["green"]}}
+{"id": 16, "label": "simple", "prompt": "Classify the sentiment of this review as positive or negative: 'I loved every minute of it.'", "check": {"any": ["positive"], "none": ["negative"]}}
+{"id": 17, "label": "simple", "prompt": "Classify the sentiment as positive or negative: 'The service was awful and slow.'", "check": {"any": ["negative"], "none": ["positive"]}}
+{"id": 18, "label": "simple", "prompt": "What is the past tense of the verb 'go'?", "check": {"any": ["went"]}}
+{"id": 19, "label": "simple", "prompt": "How many sides does a hexagon have?", "check": {"regex": "\\b(6|six)\\b"}}
+{"id": 20, "label": "simple", "prompt": "What is the freezing point of water in degrees Celsius?", "check": {"regex": "(?<![\\d.])0(?![\\d.])"}}
+{"id": 21, "label": "simple", "prompt": "Give me a synonym for 'happy'.", "check": {"any": ["joyful", "glad", "cheerful", "content", "pleased", "delighted", "joyous", "elated"]}}
+{"id": 22, "label": "simple", "prompt": "What is the capital of Japan?", "check": {"any": ["tokyo"]}}
+{"id": 23, "label": "simple", "prompt": "Who painted the Mona Lisa?", "check": {"any": ["leonardo", "da vinci"]}}
+{"id": 24, "label": "simple", "prompt": "What is the tallest mountain above sea level?", "check": {"any": ["everest"]}}
+{"id": 25, "label": "simple", "prompt": "Which gas do plants absorb from the air?", "check": {"any": ["carbon dioxide", "co2", "co₂"]}}
+{"id": 26, "label": "complex", "prompt": "A train travels 120 km in 1.5 hours. What is its average speed in km/h? End your reply with 'Answer: <number>'.", "check": {"number": 80}}
+{"id": 27, "label": "complex", "prompt": "A shop sells pens at 3 for $2. How much do 24 pens cost in dollars? End your reply with 'Answer: <number>'.", "check": {"number": 16}}
+{"id": 28, "label": "complex", "prompt": "Tom is twice as old as Anna. In 6 years the sum of their ages will be 42. How old is Anna now? End your reply with 'Answer: <number>'.", "check": {"number": 10}}
+{"id": 29, "label": "complex", "prompt": "What is 17 * 23? End your reply with 'Answer: <number>'.", "check": {"number": 391}}
+{"id": 30, "label": "complex", "prompt": "A rectangle has a perimeter of 54 cm and a length of 15 cm. What is its area in square cm? End your reply with 'Answer: <number>'.", "check": {"number": 180}}
+{"id": 31, "label": "complex", "prompt": "If 5 machines make 5 widgets in 5 minutes, how many minutes do 100 machines need to make 100 widgets? End your reply with 'Answer: <number>'.", "check": {"number": 5}}
+{"id": 32, "label": "complex", "prompt": "Solve for x: 3x + 7 = 31. End your reply with 'Answer: <number>'.", "check": {"number": 8}}
+{"id": 33, "label": "complex", "prompt": "A tank holds 200 litres and is 40% full. How many litres must be added to fill it? End your reply with 'Answer: <number>'.", "check": {"number": 120}}
+{"id": 34, "label": "complex", "prompt": "What is 15% of 240? End your reply with 'Answer: <number>'.", "check": {"number": 36}}
+{"id": 35, "label": "complex", "prompt": "The sum of three consecutive integers is 72. What is the largest of them? End your reply with 'Answer: <number>'.", "check": {"number": 25}}
+{"id": 36, "label": "complex", "prompt": "Explain why ice floats on water. Mention density.", "check": {"all": ["density"], "any": ["less dense", "lower density", "expand", "lighter"]}}
+{"id": 37, "label": "complex", "prompt": "Compare TCP and UDP. Mention reliability and ordering.", "check": {"all": ["tcp", "udp", "reliab", "order"]}}
+{"id": 38, "label": "complex", "prompt": "Why does the circuit breaker pattern help in distributed systems? Mention cascading failures.", "check": {"all": ["cascad"]}}
+{"id": 39, "label": "complex", "prompt": "Explain the difference between a process and a thread. Mention memory.", "check": {"all": ["memory"], "any": ["share", "shared"]}}
+{"id": 40, "label": "complex", "prompt": "Why is binary search faster than linear search on a sorted list? Mention complexity.", "check": {"all": ["log"], "any": ["o(log", "logarithmic", "half"]}}
+{"id": 41, "label": "complex", "prompt": "Explain what idempotency means for an HTTP PUT request.", "check": {"all": ["idempot"], "any": ["same", "repeat", "multiple times", "identical"]}}
+{"id": 42, "label": "complex", "prompt": "Compare a hash map and a balanced binary search tree for lookups. Mention time complexity.", "check": {"all": ["o(1)", "o(log"]}}
+{"id": 43, "label": "complex", "prompt": "Explain why the sky appears blue during the day. Mention scattering.", "check": {"all": ["scatter"]}}
+{"id": 44, "label": "complex", "prompt": "Write a Python function reverse_string(s) that returns the string reversed.", "check": {"regex": "def\\s+reverse_string", "all": ["return"], "any": ["[::-1]", "reversed("]}}
+{"id": 45, "label": "complex", "prompt": "Write a Python function is_even(n) that returns True if n is even.", "check": {"regex": "def\\s+is_even", "all": ["return"], "any": ["% 2", "%2", "& 1", "&1"]}}
+{"id": 46, "label": "complex", "prompt": "Write a Python function factorial(n) using recursion.", "check": {"regex": "def\\s+factorial", "all": ["return"], "any": ["n - 1", "n-1"]}}
+{"id": 47, "label": "complex", "prompt": "Write a SQL query that returns the 5 highest salaries from a table employees(name, salary).", "check": {"all": ["order by", "salary", "desc"], "any": ["limit 5", "top 5", "fetch first 5"]}}
+{"id": 48, "label": "complex", "prompt": "Write a Python function largest(nums) that returns the largest number in a list without using max().", "check": {"regex": "def\\s+largest", "all": ["return"], "none": ["max("]}}
+{"id": 49, "label": "complex", "prompt": "Write a Python list comprehension that squares every number in the list nums.", "check": {"all": ["for", "nums"], "any": ["**", "*x", "* x", "*n", "* n", "*num", "* num"]}}
+{"id": 50, "label": "complex", "prompt": "Write a regular expression that matches a 5-digit US ZIP code.", "check": {"any": ["d{5}", "[0-9]{5}"]}}
