@@ -1,7 +1,8 @@
 """Response cache backed by pgvector.
 
-Every entry lives in a scope: route, model, tenant and a hash of the conversation
-context (system prompt and earlier turns). Inside a scope the last user message is
+Every entry lives in a scope: route, model, tenant, generation parameters (max_tokens,
+temperature, stop) and a hash of the conversation context (system prompt and
+earlier turns). Inside a scope the last user message is
 matched either exactly, after normalising case, punctuation and whitespace, or
 semantically, as a cosine-distance nearest neighbour above an explicit threshold.
 
@@ -22,6 +23,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import hashlib
+import json
 import logging
 from collections.abc import Coroutine
 from dataclasses import dataclass
@@ -87,10 +89,12 @@ class SemanticCache:
         tenant: str | None,
         context: str,
         query: str,
+        params: dict[str, Any] | None = None,
     ) -> CacheKey:
         """Scope everything the answer depends on; match only the question itself."""
         context_digest = cls._hash(normalise(context))[:16] if context else "none"
-        scope = f"{route}:{model}:{tenant or PUBLIC_TENANT}:{context_digest}"
+        params_digest = cls._hash(json.dumps(params or {}, sort_keys=True))[:12]
+        scope = f"{route}:{model}:{tenant or PUBLIC_TENANT}:{context_digest}:{params_digest}"
         if len(scope) > MAX_SCOPE_LENGTH:
             scope = f"{route[:40]}:{cls._hash(scope)}"
         return CacheKey(scope=scope, query=query)

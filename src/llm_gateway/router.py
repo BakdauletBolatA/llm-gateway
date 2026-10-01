@@ -281,6 +281,7 @@ class Orchestrator:
             tenant=api_key_id,
             context=request.context_text(),
             query=request.user_text(),
+            params=request.generation_params(),
         )
         cacheable = self.cache.enabled_for(request.temperature, request.cache)
 

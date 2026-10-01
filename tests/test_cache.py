@@ -210,6 +210,28 @@ async def test_the_same_follow_up_in_a_different_conversation_is_a_miss(
         assert served_from_cache(response) is expect_hit, topic
 
 
+@pytest.mark.parametrize(
+    ("first", "second"),
+    [
+        ({"max_tokens": 16}, {"max_tokens": 512}),
+        ({"max_tokens": 16}, {}),
+        ({"stop": ["\n"]}, {"stop": ["."]}),
+        ({"stop": ["\n"]}, {}),
+        ({"temperature": 0.0}, {"temperature": 0.2}),
+    ],
+)
+async def test_generation_parameters_that_change_the_answer_are_part_of_the_scope(
+    cache_stack: dict[str, Any], first: dict[str, Any], second: dict[str, Any]
+) -> None:
+    """A 16-token answer is not the answer to the same question asked for 512."""
+    prompt = "Explain how a hash map handles collisions."
+    await ask(cache_stack, prompt, **first)
+    other = await ask(cache_stack, prompt, **second)
+    again = await ask(cache_stack, prompt, **first)
+    assert not served_from_cache(other), f"{first} was served to a request with {second}"
+    assert served_from_cache(again)
+
+
 def test_the_key_scopes_the_context_and_matches_only_the_question() -> None:
     from llm_gateway.cache.store import SemanticCache
 
@@ -218,7 +240,11 @@ def test_the_key_scopes_the_context_and_matches_only_the_question() -> None:
     two = SemanticCache.key_for(context="system: b", **base)
     assert one.scope != two.scope
     assert one.query == two.query == "q"
-    assert SemanticCache.key_for(context="", **{**base, "tenant": None}).scope.endswith(":-:none")
+    assert ":-:none:" in SemanticCache.key_for(context="", **{**base, "tenant": None}).scope
+    assert (
+        SemanticCache.key_for(context="", params={"max_tokens": 8}, **base).scope
+        != SemanticCache.key_for(context="", params={"max_tokens": 9}, **base).scope
+    )
 
 
 def test_an_oversized_scope_still_fits_the_column() -> None:
@@ -277,7 +303,7 @@ async def test_entries_are_scoped_and_counted(cache_stack: dict[str, Any]) -> No
         row = (
             await session.execute(text("SELECT scope, hits, provider FROM semantic_cache LIMIT 1"))
         ).one()
-    assert row.scope == "chaos-default:mock-gpt-4o-mini:-:none"
+    assert row.scope.startswith("chaos-default:mock-gpt-4o-mini:-:none:")
     assert row.hits >= 1
     assert row.provider == "mock_primary"
 
