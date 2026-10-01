@@ -1,0 +1,74 @@
+{
+  "target": "live",
+  "scenario": "kill",
+  "route": "live-local",
+  "backend": "qwen2.5:0.5b",
+  "users": 4,
+  "max_tokens": 64,
+  "duration_s": 90.7,
+  "kill_at_s": 45.0,
+  "started_at": "2026-10-01T14:21:30.405346+00:00",
+  "git_sha": "bc11a33",
+  "environment": {
+    "platform": "macOS-15.7.9-arm64-arm-64bit",
+    "cpu_count": 8,
+    "python": "3.12.14"
+  },
+  "notes": {
+    "killed_at_wall": "2026-10-01T14:22:15.408541+00:00"
+  },
+  "results": {
+    "requests": 89,
+    "success_rate": 1.0,
+    "requests_per_s": 0.98,
+    "latency_ms": {
+      "p50": 4047.0,
+      "p95": 5868.5,
+      "p99": 7113.3
+    },
+    "latency_ms_all_requests": {
+      "p50": 4047.0,
+      "p95": 5868.5,
+      "p99": 7113.3
+    },
+    "status_counts": {
+      "200": 89
+    },
+    "provider_share": {
+      "ollama": 0.4607,
+      "ollama_secondary": 0.5393
+    },
+    "before_kill": {
+      "requests": 45,
+      "success_rate": 1.0,
+      "requests_per_s": 1.0,
+      "latency_ms": {
+        "p50": 4036.0,
+        "p95": 6966.1,
+        "p99": 7113.3
+      },
+      "provider_share": {
+        "ollama": 0.9111,
+        "ollama_secondary": 0.0889
+      }
+    },
+    "after_kill": {
+      "requests": 44,
+      "success_rate": 1.0,
+      "requests_per_s": 0.96,
+      "latency_ms": {
+        "p50": 4047.0,
+        "p95": 4642.9,
+        "p99": 4736.3
+      },
+      "provider_share": {
+        "ollama_secondary": 1.0
+      }
+    },
+    "failover": {
+      "provider_killed": "ollama",
+      "failed_requests_after_kill": 0,
+      "seconds_to_first_success_from_other_provider": 1.1
+    }
+  }
+}

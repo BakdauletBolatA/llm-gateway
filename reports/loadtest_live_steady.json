@@ -1,0 +1,39 @@
+{
+  "target": "live",
+  "scenario": "steady",
+  "route": "live-local",
+  "backend": "qwen2.5:0.5b",
+  "users": 4,
+  "max_tokens": 64,
+  "duration_s": 90.3,
+  "kill_at_s": null,
+  "started_at": "2026-10-01T14:19:55.988528+00:00",
+  "git_sha": "bc11a33",
+  "environment": {
+    "platform": "macOS-15.7.9-arm64-arm-64bit",
+    "cpu_count": 8,
+    "python": "3.12.14"
+  },
+  "notes": {},
+  "results": {
+    "requests": 94,
+    "success_rate": 1.0,
+    "requests_per_s": 1.04,
+    "latency_ms": {
+      "p50": 3874.2,
+      "p95": 4486.2,
+      "p99": 5081.5
+    },
+    "latency_ms_all_requests": {
+      "p50": 3874.2,
+      "p95": 4486.2,
+      "p99": 5081.5
+    },
+    "status_counts": {
+      "200": 94
+    },
+    "provider_share": {
+      "ollama": 1.0
+    }
+  }
+}
