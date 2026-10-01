@@ -106,3 +106,8 @@ def test_plain_questions_that_merely_contain_a_number_stay_small() -> None:
 
 def test_a_quantity_question_without_a_number_is_not_arithmetic() -> None:
     assert classify(ask("How many days are in a leap year?"), CONFIG).tier == "small"
+
+
+def test_the_reason_names_the_whole_number_not_its_last_digit() -> None:
+    decision = classify(ask("What is 15% of 240?"), CONFIG)
+    assert decision.reasons == ["math(15%):+3"]

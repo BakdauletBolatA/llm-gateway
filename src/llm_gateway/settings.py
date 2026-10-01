@@ -303,7 +303,7 @@ class ComplexityRouterConfig(ConfigModel):
         default_factory=lambda: [
             r"\d\s*[-+*/^=×÷]\s*\d",
             # No trailing \b: "%" is not a word character, so "40%\b" never matches.
-            r"\d(\.\d+)?\s*%",
+            r"\d+(\.\d+)?\s*%",
             r"[$€£]\s*\d",
             r"\b\d+(\.\d+)?\s*(km|kg|cm|mm|litres?|liters?|hours?|minutes?|miles|percent)\b",
             # A quantity question only counts as arithmetic when there is a number to work with.
