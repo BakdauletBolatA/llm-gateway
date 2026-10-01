@@ -120,9 +120,26 @@ def test_the_routing_story_matches_the_recorded_answers() -> None:
         assert phrase in README, phrase
 
 
-def test_the_contended_run_quoted_in_the_limits() -> None:
-    steady = json.loads((ROOT / "reports/loadtest_live_kill.json").read_text())["results"]
+def test_the_live_spread_quoted_in_the_limits() -> None:
+    first = json.loads((ROOT / "reports/loadtest_live_steady.json").read_text())["results"]
+    repeats = json.loads((ROOT / "reports/loadtest_live_steady_repeats.json").read_text())
+    span = repeats["aggregate"]["requests_per_s"]
+    assert f"measured {first['requests_per_s']} req/s" in README
+    assert f"gave {span['min']}-{span['max']}" in README
+    assert first["requests_per_s"] > span["max"], (
+        "the story says the first run was outside the range"
+    )
+    assert repeats["aggregate"]["runs"] == 5 and "5 runs per row" in README
     contended = json.loads((ROOT / "reports/loadtest_live_kill_contended.json").read_text())
-    assert f"{contended['results']['requests_per_s']} req/s instead of" in README
-    assert f"{steady['requests_per_s']}" in README  # also in the generated table
-    assert "0.24 req/s instead of\n  0.98" in README
+    kill_first = json.loads((ROOT / "reports/loadtest_live_kill.json").read_text())["results"]
+    assert f"managed {contended['results']['requests_per_s']} req/s instead of" in README
+    assert str(kill_first["requests_per_s"]) in README
+
+
+def test_no_run_failed_in_the_repeats() -> None:
+    for scenario in ("steady", "kill"):
+        runs = json.loads((ROOT / f"reports/loadtest_live_{scenario}_repeats.json").read_text())[
+            "runs"
+        ]
+        assert all(r["results"]["success_rate"] == 1.0 for r in runs)
+    assert "No failed requests in any run." in README

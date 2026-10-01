@@ -169,10 +169,10 @@ minutes).
 
 | backend | scenario | users | runs | req/s | p50 | p95 | p99 | success | failover |
 |---|---|---|---|---|---|---|---|---|---|
-| mock provider | steady | 4 | 1 | 43.84 | 90 ms | 128 ms | 133 ms | 100.0% |  |
-| mock provider | kill | 4 | 1 | 41.63 | 91 ms | 132 ms | 240 ms | 100.0% | 0 failed after the kill; first answer from the other server after 0.0 s |
-| live qwen2.5:0.5b, CPU | steady | 4 | 1 | 1.04 | 3,874 ms | 4,486 ms | 5,082 ms | 100.0% |  |
-| live qwen2.5:0.5b, CPU | kill | 4 | 1 | 0.98 | 4,047 ms | 5,868 ms | 7,113 ms | 100.0% | 0 failed after the kill; first answer from the other server after 1.1 s |
+| mock provider | steady | 4 | 5 | 43.85 (43.45-44.54) | 90 ms (89 ms-91 ms) | 127 ms (126 ms-128 ms) | 134 ms (131 ms-135 ms) | 100.0% (100.0%-100.0%) |  |
+| mock provider | kill | 4 | 5 | 42.33 (42.05-42.52) | 89 ms (89 ms-90 ms) | 130 ms (130 ms-134 ms) | 233 ms (230 ms-240 ms) | 100.0% (100.0%-100.0%) | failed after the kill: 0 (0-0); first answer from the other server: 0.0 (0.0-0.1) s |
+| live qwen2.5:0.5b, CPU | steady | 4 | 5 | 0.64 (0.52-0.68) | 6,110 ms (5,937 ms-6,629 ms) | 7,537 ms (6,955 ms-15,536 ms) | 7,938 ms (7,410 ms-18,025 ms) | 100.0% (100.0%-100.0%) |  |
+| live qwen2.5:0.5b, CPU | kill | 4 | 5 | 0.64 (0.61-0.78) | 5,882 ms (4,620 ms-6,609 ms) | 7,937 ms (7,124 ms-9,092 ms) | 10,802 ms (8,676 ms-11,798 ms) | 100.0% (100.0%-100.0%) | failed after the kill: 0 (0-0); first answer from the other server: 1.7 (0.4-2.2) s |
 
 **Routing by complexity** — correctness is a programmatic check, cost is modeled from measured tokens at gpt-4o-mini / gpt-4o prices ([`eval/routing_eval.py`](eval/routing_eval.py)):
 
@@ -190,7 +190,7 @@ minutes).
 |---|---|---|
 | chaos benchmark: 11 failure profiles, 9 iterations, ablations, multi-replica probes | **mock provider** | failure behaviour is injected and deterministic, so rows are comparable between iterations. A live model gives hardware-dependent latency, which would make them incomparable. |
 | load test, mock rows | **mock provider** | the same two scenarios and the same reliability overlay as the live rows, so the difference between the two is the backend |
-| load test, live rows | **live `qwen2.5:0.5b`** on Ollama, CPU only, Docker on an 8-core laptop | one run per row, about 90 requests each: the p99 is close to the maximum |
+| load test, live rows | **live `qwen2.5:0.5b`** on Ollama, CPU only, Docker on an 8-core laptop | 5 runs per row of 90 s (about 55-70 requests each), reported as median with the range. The p99 of a run is close to its maximum. |
 | routing eval | **live `qwen2.5:0.5b` and `qwen2.5:3b`** | answers were recorded once, then every policy is replayed over the same answers |
 | cache eval | **local `all-MiniLM-L6-v2`** (and the hash n-gram embedder for comparison) | no provider involved |
 | adapters for Anthropic and OpenAI | **neither**; unit-tested against `httpx.MockTransport` | request format, response parsing and error classification are tested; the chaos harness has never been run against a paid API |
@@ -198,13 +198,17 @@ minutes).
 Limits that apply to the tables above:
 
 - The load test uses 4 virtual users: a CPU-bound 0.5B model is already saturated
-  there. There are no runs at higher concurrency, and no repeated runs to estimate
-  run-to-run spread.
-- Live throughput depends on the machine at that moment. A repeat of the *kill*
-  scenario while other applications were using the CPU managed 0.24 req/s instead of
-  0.98 ([`reports/loadtest_live_kill_contended.json`](reports/loadtest_live_kill_contended.json)),
-  with no failed requests either way. Run-to-run spread on a quiet machine was not
-  measured.
+  there. There are no runs at higher concurrency.
+- Live throughput varies more between sessions than within one. The first single
+  run of the *steady* scenario measured 1.04 req/s
+  ([`reports/loadtest_live_steady.json`](reports/loadtest_live_steady.json)); five
+  repeats taken later on the same laptop gave 0.52-0.68, so that first run was
+  outside the range of the repeats. A *kill* run made while other applications were
+  using the CPU managed 0.24 req/s instead of 0.98
+  ([`reports/loadtest_live_kill_contended.json`](reports/loadtest_live_kill_contended.json)).
+  Read the live rows as "about 0.5-1 req/s on this hardware", not as a benchmark of
+  the gateway: the gateway adds almost nothing, the model is the bottleneck. The cause
+  of the gap between sessions was not identified. No failed requests in any run.
 - The live model is warmed on both Ollama servers before timing starts, so a cold
   start on the failover target is not in the numbers.
 - Routing cost is **modeled**, not billed: tokens are measured on the local models
