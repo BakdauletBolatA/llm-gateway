@@ -136,3 +136,10 @@ def test_an_unknown_environment_override_is_refused(monkeypatch: pytest.MonkeyPa
     monkeypatch.setenv("GW__RELIABILITY__HEDGING__DELYA_MS", "999")
     with pytest.raises(ValueError, match="delya_ms"):
         load_settings(CONFIG)
+
+
+def test_the_shipped_config_leaves_the_cache_off() -> None:
+    """A cache serves stored answers; nobody should get that without turning it on."""
+    cache = load_settings(CONFIG).reliability.cache
+    assert cache.enabled is False
+    assert cache.require_opt_in is True

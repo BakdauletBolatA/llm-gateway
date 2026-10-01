@@ -25,6 +25,8 @@ set -euo pipefail
 # порог 0.60) на воркладе из 22 заведомо разных тем. В config/gateway.yaml по
 # умолчанию стоит безопасный exact, поэтому воспроизведение включает измеренный
 # режим явно. Переопределите переменные, чтобы измерить другой.
+export GW__RELIABILITY__CACHE__ENABLED="${GW__RELIABILITY__CACHE__ENABLED:-true}"
+export GW__RELIABILITY__CACHE__SIMILARITY_THRESHOLD="${GW__RELIABILITY__CACHE__SIMILARITY_THRESHOLD:-0.60}"
 export GW__RELIABILITY__CACHE__MATCH="${GW__RELIABILITY__CACHE__MATCH:-semantic}"
 export GW__RELIABILITY__CACHE__ALLOW_LEXICAL_SEMANTIC="${GW__RELIABILITY__CACHE__ALLOW_LEXICAL_SEMANTIC:-true}"
 
