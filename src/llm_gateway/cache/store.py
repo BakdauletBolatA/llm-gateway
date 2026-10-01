@@ -15,7 +15,8 @@ The TTL only filters expired rows out of the result; it does not remove them, so
 they have to be swept. Left alone they are pure cost — nothing may ever be served
 from them, and the search still has to walk past them. Measured on this stand with
 an exact-match lookup: 3.6 ms at zero expired rows against 13.5 ms at 20 000, with
-the table 23 MB larger (bench/probes/cache_sweep_off.json). At a 15-minute TTL that is well under an hour of traffic.
+the table 23 MB larger (bench/probes/cache_sweep_off.json). At a 15-minute TTL that is
+well under an hour of traffic.
 """
 
 from __future__ import annotations
