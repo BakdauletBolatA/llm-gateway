@@ -213,10 +213,21 @@ def collect(args: argparse.Namespace, prompts: list[dict[str, Any]]) -> list[dic
     return records
 
 
-def rescore(path: Path, prompts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def rescore(
+    path: Path, prompts: list[dict[str, Any]], redecide: bool = False
+) -> list[dict[str, Any]]:
+    """Re-score recorded answers; with `redecide`, also re-run the router on the prompts."""
     checks = {p["id"]: p["check"] for p in prompts}
+    texts = {p["id"]: p["prompt"] for p in prompts}
+    router_config = load_settings(str(ROOT / "config" / "gateway.yaml")).routing.complexity
     records = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
     for record in records:
+        if redecide:
+            request = ChatCompletionRequest.model_validate(
+                {"messages": [{"role": "user", "content": texts[record["id"]]}]}
+            )
+            decision = classify(request, router_config)
+            record["decision"], record["decision_reasons"] = decision.tier, decision.reasons
         for tier in ("small", "large"):
             side = record[tier]
             side["passed"] = side["http_status"] == 200 and passes(
@@ -234,10 +245,17 @@ def main() -> int:
     parser.add_argument("--timeout", type=float, default=120.0)
     parser.add_argument("--requests", type=int, default=100, help="cost is reported per this many")
     parser.add_argument("--rescore", type=Path, help="re-score recorded answers, no model calls")
+    parser.add_argument(
+        "--redecide", action="store_true", help="with --rescore: run the router again as it is now"
+    )
+    parser.add_argument("--out", type=Path, help="report path (default depends on the mode)")
+    parser.add_argument("--note", help="free text stored in the report, e.g. how the rules changed")
     args = parser.parse_args()
 
     prompts = [json.loads(line) for line in PROMPTS.read_text().splitlines() if line.strip()]
-    records = rescore(args.rescore, prompts) if args.rescore else collect(args, prompts)
+    records = (
+        rescore(args.rescore, prompts, args.redecide) if args.rescore else collect(args, prompts)
+    )
 
     models = load_settings(str(ROOT / "config" / "gateway.yaml")).pricing.models
     prices = {
@@ -259,7 +277,12 @@ def main() -> int:
         with (REPORTS / "routing_answers.jsonl").open("w") as handle:
             for record in records:
                 handle.write(json.dumps(record, ensure_ascii=False) + "\n")
-    (REPORTS / "routing_eval.json").write_text(json.dumps(result, indent=2) + "\n")
+    if args.note:
+        result["note"] = args.note
+    default_name = "routing_eval_replay.json" if args.rescore else "routing_eval.json"
+    out = args.out or REPORTS / default_name
+    out.write_text(json.dumps(result, indent=2) + "\n")
+    print(f"wrote {out.relative_to(ROOT) if out.is_relative_to(ROOT) else out}")
 
     print(f"\n{'policy':<14} {'pass':>9} {'95% CI':>14} {'$/100 req (modeled)':>21} {'small':>6}")
     for name, row in result["policies"].items():
