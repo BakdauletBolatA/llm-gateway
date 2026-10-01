@@ -153,7 +153,10 @@ def main() -> int:
         timer = threading.Timer(kill_at_s, kill_backend, (args.target, args.mock, notes))
         timer.start()
     try:
-        subprocess.run(command, env=env, cwd=ROOT, check=True)
+        # Locust exits 1 when any request failed. That is a result, not a crash.
+        completed = subprocess.run(command, env=env, cwd=ROOT, check=False)
+        if completed.returncode not in (0, 1):
+            raise SystemExit(f"locust failed with exit code {completed.returncode}")
     finally:
         if timer is not None:
             timer.cancel()
