@@ -143,3 +143,23 @@ def test_the_shipped_config_leaves_the_cache_off() -> None:
     cache = load_settings(CONFIG).reliability.cache
     assert cache.enabled is False
     assert cache.require_opt_in is True
+
+
+def test_the_live_route_fails_over_between_two_local_model_servers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("OLLAMA_ENABLED", "true")
+    chain = load_settings(CONFIG).resolve_chain("live-local")
+    assert [hop.provider for hop in chain] == ["ollama", "ollama_secondary"]
+    assert chain[0].model == chain[1].model
+
+
+def test_the_mock_route_used_for_the_live_comparison_has_the_same_shape() -> None:
+    chain = load_settings(CONFIG).resolve_chain("mock-two-hop")
+    assert [hop.provider for hop in chain] == ["mock_primary", "mock_secondary"]
+
+
+def test_the_live_overlay_does_not_race_two_requests_on_a_cpu_bound_backend() -> None:
+    settings = load_settings(CONFIG, overlay_path=Path("config/extras/live_local.yaml"))
+    assert settings.reliability.hedging.enabled is False
+    assert settings.reliability.timeouts.total_s >= 30

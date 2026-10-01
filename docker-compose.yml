@@ -2,8 +2,9 @@
 # Работает без единого платного ключа: маршрут chaos-default ходит только в мок.
 #
 # Ollama выключена по умолчанию (образ и модель весят гигабайты):
-#   docker compose --profile ollama up
-# и затем маршрут local-only / production будет использовать локальную модель.
+#   OLLAMA_ENABLED=true docker compose --profile ollama up
+# Модель по умолчанию — qwen2.5:0.5b (около 400 МБ, работает на CPU). Маршруты
+# local-only и live-local ходят в неё; live-local — через два сервера Ollama.
 
 name: llm-gateway
 
@@ -53,6 +54,8 @@ services:
       DATABASE_URL: postgresql+asyncpg://gateway:gateway@postgres:5432/llm_gateway
       MOCK_BASE_URL: http://mock:8081
       OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_SECONDARY_BASE_URL: http://ollama-secondary:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:0.5b}
       GATEWAY_CONFIG: ${GATEWAY_CONFIG:-config/gateway.yaml}
       GATEWAY_CONFIG_OVERLAY: ${GATEWAY_CONFIG_OVERLAY:-}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
@@ -112,6 +115,25 @@ services:
       timeout: 5s
       retries: 30
 
+  # Второй сервер на тех же весах: нагрузочный тест останавливает первый и
+  # проверяет, что шлюз переключается на живую модель, а не на мок. Том общий,
+  # поэтому модель скачивается один раз.
+  ollama-secondary:
+    image: ollama/ollama:latest
+    profiles: ["ollama"]
+    ports:
+      - "${OLLAMA_SECONDARY_PORT:-11435}:11434"
+    volumes:
+      - ollama:/root/.ollama
+    depends_on:
+      ollama-pull:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
   ollama-pull:
     image: ollama/ollama:latest
     profiles: ["ollama"]
@@ -121,7 +143,7 @@ services:
     environment:
       OLLAMA_HOST: http://ollama:11434
     entrypoint: ["ollama"]
-    command: ["pull", "${OLLAMA_MODEL:-llama3.2}"]
+    command: ["pull", "${OLLAMA_MODEL:-qwen2.5:0.5b}"]
     restart: "no"
 
 volumes:
