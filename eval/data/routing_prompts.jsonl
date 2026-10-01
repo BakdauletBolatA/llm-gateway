@@ -33,7 +33,7 @@
 {"id": 33, "label": "complex", "prompt": "A tank holds 200 litres and is 40% full. How many litres must be added to fill it? End your reply with 'Answer: <number>'.", "check": {"number": 120}}
 {"id": 34, "label": "complex", "prompt": "What is 15% of 240? End your reply with 'Answer: <number>'.", "check": {"number": 36}}
 {"id": 35, "label": "complex", "prompt": "The sum of three consecutive integers is 72. What is the largest of them? End your reply with 'Answer: <number>'.", "check": {"number": 25}}
-{"id": 36, "label": "complex", "prompt": "Explain why ice floats on water. Mention density.", "check": {"all": ["density"], "any": ["less dense", "lower density", "expand", "lighter"]}}
+{"id": 36, "label": "complex", "prompt": "Explain why ice floats on water. Mention density.", "check": {"all": ["density"], "any": ["less dense", "lower density", "density is less", "less than", "expand", "lighter"]}}
 {"id": 37, "label": "complex", "prompt": "Compare TCP and UDP. Mention reliability and ordering.", "check": {"all": ["tcp", "udp", "reliab", "order"]}}
 {"id": 38, "label": "complex", "prompt": "Why does the circuit breaker pattern help in distributed systems? Mention cascading failures.", "check": {"all": ["cascad"]}}
 {"id": 39, "label": "complex", "prompt": "Explain the difference between a process and a thread. Mention memory.", "check": {"all": ["memory"], "any": ["share", "shared"]}}
@@ -45,6 +45,6 @@
 {"id": 45, "label": "complex", "prompt": "Write a Python function is_even(n) that returns True if n is even.", "check": {"regex": "def\\s+is_even", "all": ["return"], "any": ["% 2", "%2", "& 1", "&1"]}}
 {"id": 46, "label": "complex", "prompt": "Write a Python function factorial(n) using recursion.", "check": {"regex": "def\\s+factorial", "all": ["return"], "any": ["n - 1", "n-1"]}}
 {"id": 47, "label": "complex", "prompt": "Write a SQL query that returns the 5 highest salaries from a table employees(name, salary).", "check": {"all": ["order by", "salary", "desc"], "any": ["limit 5", "top 5", "fetch first 5"]}}
-{"id": 48, "label": "complex", "prompt": "Write a Python function largest(nums) that returns the largest number in a list without using max().", "check": {"regex": "def\\s+largest", "all": ["return"], "none": ["max("]}}
+{"id": 48, "label": "complex", "prompt": "Write a Python function largest(nums) that returns the largest number in a list without using max().", "check": {"regex": "def\\s+largest", "all": ["return"], "none_in_code": ["max("]}}
 {"id": 49, "label": "complex", "prompt": "Write a Python list comprehension that squares every number in the list nums.", "check": {"all": ["for", "nums"], "any": ["**", "*x", "* x", "*n", "* n", "*num", "* num"]}}
 {"id": 50, "label": "complex", "prompt": "Write a regular expression that matches a 5-digit US ZIP code.", "check": {"any": ["d{5}", "[0-9]{5}"]}}

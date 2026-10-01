@@ -136,3 +136,33 @@ def test_the_prompt_file_is_what_the_eval_claims_it_is() -> None:
     assert {p["label"] for p in prompts} == {"simple", "complex"}
     assert len({p["id"] for p in prompts}) == 50
     assert all(p["check"] for p in prompts)
+
+
+def test_none_in_code_looks_only_inside_code_blocks() -> None:
+    check = {"none_in_code": ["max("]}
+    prose_only = "Without using `max()`:\n```python\ndef f(x):\n    return sorted(x)[-1]\n```"
+    assert passes(check, prose_only)
+    cheating = "```python\ndef f(x):\n    return max(x)\n```"
+    assert not passes(check, cheating)
+
+
+def test_none_in_code_falls_back_to_the_whole_reply_when_there_is_no_fence() -> None:
+    assert not passes({"none_in_code": ["max("]}, "def f(x): return max(x)")
+
+
+def test_the_corrected_criteria_accept_the_answers_they_wrongly_rejected() -> None:
+    prompts = {
+        json.loads(line)["id"]: json.loads(line)
+        for line in (ROOT / "eval/data/routing_prompts.jsonl").read_text().splitlines()
+    }
+    ice = "Ice floats because its density is less than that of water."
+    assert passes(prompts[36]["check"], ice)
+    largest = (
+        "A function that avoids the built-in `max()`:\n```python\ndef largest(nums):\n"
+        "    best = nums[0]\n    for n in nums:\n        if n > best:\n            best = n\n"
+        "    return best\n```"
+    )
+    assert passes(prompts[48]["check"], largest)
+    assert not passes(
+        prompts[48]["check"], "```python\ndef largest(nums):\n    return max(nums)\n```"
+    )

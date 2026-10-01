@@ -60,6 +60,11 @@ def passes(check: dict[str, Any], text: str) -> bool:
         return False
     if "none" in check and any(word.lower() in lowered for word in check["none"]):
         return False
+    if "none_in_code" in check:
+        blocks = re.findall(r"```(?:\w+)?\n(.*?)```", text, re.DOTALL)
+        scope = "\n".join(blocks) if blocks else text
+        if any(word.lower() in scope.lower() for word in check["none_in_code"]):
+            return False
     if "regex" in check and not re.search(check["regex"], text):
         return False
     if "number" in check:
