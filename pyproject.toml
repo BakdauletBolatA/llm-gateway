@@ -27,6 +27,7 @@ dev = [
 ]
 
 embeddings = ["sentence-transformers>=3.0"]
+loadtest = ["locust>=2.29"]
 
 [build-system]
 requires = ["hatchling"]
