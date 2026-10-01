@@ -165,14 +165,14 @@ minutes).
 | hash n-gram vectors (the old matcher) | 0.857 | 0.86 | 0.0% | 0 of 30 |
 | all-MiniLM-L6-v2 (local, CPU) | 0.995 | 0.93 | 12.9% | 1 of 30 |
 
-**Load test** — closed loop, `max_tokens` 64 ([`loadtest/run.py`](loadtest/run.py)). *kill* stops the primary backend halfway:
+**Load test** — closed loop, `max_tokens` 64 ([`loadtest/run.py`](loadtest/run.py)). *kill* stops the primary backend halfway. With several runs a cell is the median, with the minimum and maximum in brackets:
 
-| backend | scenario | users | requests | req/s | p50 | p95 | p99 | success | failover |
+| backend | scenario | users | runs | req/s | p50 | p95 | p99 | success | failover |
 |---|---|---|---|---|---|---|---|---|---|
-| mock provider | steady | 4 | 2644 | 43.84 | 90 ms | 128 ms | 133 ms | 100.0% |  |
-| mock provider | kill | 4 | 2509 | 41.63 | 91 ms | 132 ms | 240 ms | 100.0% | 0 failed after the kill; first answer from the other server after 0.0 s |
-| live qwen2.5:0.5b, CPU | steady | 4 | 94 | 1.04 | 3,874 ms | 4,486 ms | 5,082 ms | 100.0% |  |
-| live qwen2.5:0.5b, CPU | kill | 4 | 89 | 0.98 | 4,047 ms | 5,868 ms | 7,113 ms | 100.0% | 0 failed after the kill; first answer from the other server after 1.1 s |
+| mock provider | steady | 4 | 1 | 43.84 | 90 ms | 128 ms | 133 ms | 100.0% |  |
+| mock provider | kill | 4 | 1 | 41.63 | 91 ms | 132 ms | 240 ms | 100.0% | 0 failed after the kill; first answer from the other server after 0.0 s |
+| live qwen2.5:0.5b, CPU | steady | 4 | 1 | 1.04 | 3,874 ms | 4,486 ms | 5,082 ms | 100.0% |  |
+| live qwen2.5:0.5b, CPU | kill | 4 | 1 | 0.98 | 4,047 ms | 5,868 ms | 7,113 ms | 100.0% | 0 failed after the kill; first answer from the other server after 1.1 s |
 
 **Routing by complexity** — correctness is a programmatic check, cost is modeled from measured tokens at gpt-4o-mini / gpt-4o prices ([`eval/routing_eval.py`](eval/routing_eval.py)):
 
