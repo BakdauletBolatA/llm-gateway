@@ -118,3 +118,11 @@ def test_the_routing_story_matches_the_recorded_answers() -> None:
     assert 0.30 < cheaper < 0.36, "the story says 'a third lower'"
     for phrase in ("43 of 50", "49 of 50", "47 of 50", "28 of 30", "29 of 30"):
         assert phrase in README, phrase
+
+
+def test_the_contended_run_quoted_in_the_limits() -> None:
+    steady = json.loads((ROOT / "reports/loadtest_live_kill.json").read_text())["results"]
+    contended = json.loads((ROOT / "reports/loadtest_live_kill_contended.json").read_text())
+    assert f"{contended['results']['requests_per_s']} req/s instead of" in README
+    assert f"{steady['requests_per_s']}" in README  # also in the generated table
+    assert "0.24 req/s instead of\n  0.98" in README

@@ -1,0 +1,75 @@
+{
+  "target": "live",
+  "scenario": "kill",
+  "route": "live-local",
+  "backend": "qwen2.5:0.5b",
+  "users": 4,
+  "max_tokens": 64,
+  "duration_s": 40.9,
+  "kill_at_s": 20.0,
+  "started_at": "2026-10-01T15:06:08.631297+00:00",
+  "git_sha": "6602379",
+  "environment": {
+    "platform": "macOS-15.7.9-arm64-arm-64bit",
+    "cpu_count": 8,
+    "python": "3.12.14"
+  },
+  "notes": {
+    "killed_at_wall": "2026-10-01T15:06:28.636744+00:00"
+  },
+  "results": {
+    "requests": 10,
+    "success_rate": 1.0,
+    "requests_per_s": 0.24,
+    "latency_ms": {
+      "p50": 12696.3,
+      "p95": 27811.8,
+      "p99": 27811.8
+    },
+    "latency_ms_all_requests": {
+      "p50": 12696.3,
+      "p95": 27811.8,
+      "p99": 27811.8
+    },
+    "status_counts": {
+      "200": 10
+    },
+    "provider_share": {
+      "ollama": 0.5,
+      "ollama_secondary": 0.5
+    },
+    "before_kill": {
+      "requests": 9,
+      "success_rate": 1.0,
+      "requests_per_s": 0.45,
+      "latency_ms": {
+        "p50": 12696.3,
+        "p95": 27811.8,
+        "p99": 27811.8
+      },
+      "provider_share": {
+        "ollama": 0.5556,
+        "ollama_secondary": 0.4444
+      }
+    },
+    "after_kill": {
+      "requests": 1,
+      "success_rate": 1.0,
+      "requests_per_s": 0.05,
+      "latency_ms": {
+        "p50": 14379.5,
+        "p95": 14379.5,
+        "p99": 14379.5
+      },
+      "provider_share": {
+        "ollama_secondary": 1.0
+      }
+    },
+    "failover": {
+      "provider_killed": "ollama",
+      "failed_requests_after_kill": 0,
+      "seconds_to_first_success_from_other_provider": 3.0
+    }
+  },
+  "note": "Repeat of the kill scenario on the same laptop while other applications were using the CPU (a Grafana tab, the Docker VM, a browser). Kept to show the run-to-run spread of the live numbers; not used in the README table."
+}

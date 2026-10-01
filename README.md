@@ -200,6 +200,11 @@ Limits that apply to the tables above:
 - The load test uses 4 virtual users: a CPU-bound 0.5B model is already saturated
   there. There are no runs at higher concurrency, and no repeated runs to estimate
   run-to-run spread.
+- Live throughput depends on the machine at that moment. A repeat of the *kill*
+  scenario while other applications were using the CPU managed 0.24 req/s instead of
+  0.98 ([`reports/loadtest_live_kill_contended.json`](reports/loadtest_live_kill_contended.json)),
+  with no failed requests either way. Run-to-run spread on a quiet machine was not
+  measured.
 - The live model is warmed on both Ollama servers before timing starts, so a cold
   start on the failover target is not in the numbers.
 - Routing cost is **modeled**, not billed: tokens are measured on the local models
@@ -315,8 +320,12 @@ terminal next to it.
 | 0:48 | `curl -si localhost:8080/v1/chat/completions -H 'content-type: application/json' -d '{"model":"auto","messages":[{"role":"user","content":"What is 15% of 240? End with Answer: <number>"}]}' \| grep -i '^x-gateway-\(route\|model\)'` | the router sent a hard question to the 3B model, and says why |
 | 0:55 | the same command with `"What is the capital of Australia?"` | the small model, `score=0`; *Routing decisions* in Grafana shows both tiers |
 
-After the take: `docker compose --profile ollama start ollama` brings the stopped
-server back.
+The Grafana panel titles are in Russian; the metric names under them are not. Run the
+demo on an otherwise idle machine: the live model is CPU-bound, and a busy laptop makes
+it several times slower (see the limits above). After the take,
+`docker compose --profile ollama start ollama` brings the stopped server back. If you
+changed the code since the last build, keep `--build` in the prepare step: a stale
+image answers with the old routing rules.
 
 ## API
 
