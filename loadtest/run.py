@@ -37,7 +37,7 @@ import httpx
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from summarise import summarise  # noqa: E402
+from summarise import aggregate_runs, summarise  # noqa: E402
 
 REPORTS = ROOT / "reports"
 ROUTES = {"mock": "mock-two-hop", "live": "live-local"}
@@ -52,9 +52,23 @@ def git_sha() -> str:
         return "unknown"
 
 
+def wait_until_up(url: str, seconds: int = 120) -> None:
+    """The previous kill run restarts a server; give it time to come back."""
+    deadline = time.time() + seconds
+    while time.time() < deadline:
+        try:
+            if httpx.get(f"{url}/api/tags", timeout=3).status_code == 200:
+                return
+        except httpx.HTTPError:
+            pass
+        time.sleep(2)
+    raise SystemExit(f"{url} did not come back within {seconds} s")
+
+
 def warm_live_models(urls: list[str], model: str) -> None:
     """Load the model on every server first, so a cold start is not billed to latency."""
     for url in urls:
+        wait_until_up(url)
         response = httpx.post(
             f"{url}/api/chat",
             json={
@@ -87,26 +101,7 @@ def restore_backend(target: str, mock_url: str) -> None:
         httpx.post(f"{mock_url}/admin/scenario", json={"scenario": "healthy"}, timeout=10)
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("--target", choices=["mock", "live"], required=True)
-    parser.add_argument("--scenario", choices=["steady", "kill"], required=True)
-    parser.add_argument("--users", type=int, default=4)
-    parser.add_argument("--duration", type=int, default=90, help="seconds")
-    parser.add_argument("--kill-at", type=float, default=0.5, help="fraction of the run")
-    parser.add_argument("--max-tokens", type=int, default=64)
-    parser.add_argument("--gateway", default=os.environ.get("GATEWAY_URL", "http://127.0.0.1:8080"))
-    parser.add_argument("--mock", default=os.environ.get("MOCK_URL", "http://127.0.0.1:8081"))
-    parser.add_argument(
-        "--ollama",
-        nargs="+",
-        default=["http://127.0.0.1:11434", "http://127.0.0.1:11435"],
-        help="Ollama servers to warm before a live run",
-    )
-    parser.add_argument("--model", default=os.environ.get("OLLAMA_MODEL", "qwen2.5:0.5b"))
-    parser.add_argument("--out", type=Path, default=REPORTS)
-    args = parser.parse_args()
-
+def run_once(args: argparse.Namespace) -> dict[str, Any]:
     route = ROUTES[args.target]
     kill_at_s = args.duration * args.kill_at if args.scenario == "kill" else None
     notes: dict[str, Any] = {}
@@ -184,10 +179,81 @@ def main() -> int:
         "notes": notes,
         "results": summary,
     }
+    return report
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    parser.add_argument("--target", choices=["mock", "live"], required=True)
+    parser.add_argument("--scenario", choices=["steady", "kill"], required=True)
+    parser.add_argument("--users", type=int, default=4)
+    parser.add_argument("--duration", type=int, default=90, help="seconds")
+    parser.add_argument("--kill-at", type=float, default=0.5, help="fraction of the run")
+    parser.add_argument("--max-tokens", type=int, default=64)
+    parser.add_argument("--gateway", default=os.environ.get("GATEWAY_URL", "http://127.0.0.1:8080"))
+    parser.add_argument("--mock", default=os.environ.get("MOCK_URL", "http://127.0.0.1:8081"))
+    parser.add_argument(
+        "--ollama",
+        nargs="+",
+        default=["http://127.0.0.1:11434", "http://127.0.0.1:11435"],
+        help="Ollama servers to warm before a live run",
+    )
+    parser.add_argument("--model", default=os.environ.get("OLLAMA_MODEL", "qwen2.5:0.5b"))
+    parser.add_argument("--out", type=Path, default=REPORTS)
+    parser.add_argument(
+        "--repeat", type=int, default=1, help="run the scenario N times and report the spread"
+    )
+    parser.add_argument(
+        "--pause", type=int, default=20, help="seconds to let the machine settle between runs"
+    )
+    args = parser.parse_args()
+
+    return _main(args)
+
+
+def _main(args: argparse.Namespace) -> int:
     args.out.mkdir(exist_ok=True)
-    path = args.out / f"loadtest_{args.target}_{args.scenario}.json"
-    path.write_text(json.dumps(report, indent=2) + "\n")
-    print(json.dumps(summary, indent=2))
+    if args.repeat == 1:
+        report = run_once(args)
+        path = args.out / f"loadtest_{args.target}_{args.scenario}.json"
+        path.write_text(json.dumps(report, indent=2) + "\n")
+        print(json.dumps(report["results"], indent=2))
+    else:
+        reports = []
+        for index in range(args.repeat):
+            if index:
+                time.sleep(args.pause)
+            load_before = os.getloadavg()[0]
+            print(f"run {index + 1}/{args.repeat}; host load average {load_before:.1f}", flush=True)
+            report = run_once(args)
+            report["host_load_average_1m_before"] = round(load_before, 2)
+            reports.append(report)
+        first = reports[0]
+        report = {
+            "target": first["target"],
+            "scenario": first["scenario"],
+            "route": first["route"],
+            "backend": first["backend"],
+            "users": first["users"],
+            "max_tokens": first["max_tokens"],
+            "repeats": len(reports),
+            "pause_s": args.pause,
+            "git_sha": first["git_sha"],
+            "environment": first["environment"],
+            "aggregate": aggregate_runs([r["results"] for r in reports]),
+            "runs": [
+                {
+                    "started_at": r["started_at"],
+                    "duration_s": r["duration_s"],
+                    "host_load_average_1m_before": r["host_load_average_1m_before"],
+                    "results": r["results"],
+                }
+                for r in reports
+            ],
+        }
+        path = args.out / f"loadtest_{args.target}_{args.scenario}_repeats.json"
+        path.write_text(json.dumps(report, indent=2) + "\n")
+        print(json.dumps(report["aggregate"], indent=2))
     print(f"wrote {path.relative_to(ROOT) if path.is_relative_to(ROOT) else path}")
     return 0
 
