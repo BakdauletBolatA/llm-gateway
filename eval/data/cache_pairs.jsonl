@@ -1,0 +1,121 @@
+{"id": 1, "a": "How do I reset my password?", "b": "I forgot my password, how can I change it?", "label": "same", "category": "paraphrase"}
+{"id": 2, "a": "What is the capital of France?", "b": "Which city is the capital of France?", "label": "same", "category": "paraphrase"}
+{"id": 3, "a": "How can I cancel my subscription?", "b": "What are the steps to end my subscription?", "label": "same", "category": "paraphrase"}
+{"id": 4, "a": "Where can I find my invoices?", "b": "How do I download my past invoices?", "label": "same", "category": "paraphrase"}
+{"id": 5, "a": "What is a database index?", "b": "Can you explain what indexes do in a database?", "label": "same", "category": "paraphrase"}
+{"id": 6, "a": "How do I reverse a string in Python?", "b": "What's the way to flip a string around in Python?", "label": "same", "category": "paraphrase"}
+{"id": 7, "a": "What does HTTP status 429 mean?", "b": "Explain the 429 Too Many Requests response.", "label": "same", "category": "paraphrase"}
+{"id": 8, "a": "How long does shipping take?", "b": "How many days until my order arrives?", "label": "same", "category": "paraphrase"}
+{"id": 9, "a": "What are your opening hours?", "b": "When are you open?", "label": "same", "category": "paraphrase"}
+{"id": 10, "a": "How do I update my credit card?", "b": "Where do I change the payment card on my account?", "label": "same", "category": "paraphrase"}
+{"id": 11, "a": "Is there a free trial?", "b": "Can I try the product for free before paying?", "label": "same", "category": "paraphrase"}
+{"id": 12, "a": "How do I delete my account?", "b": "I want to close my account permanently, how?", "label": "same", "category": "paraphrase"}
+{"id": 13, "a": "What is the difference between TCP and UDP?", "b": "How do TCP and UDP differ from each other?", "label": "same", "category": "paraphrase"}
+{"id": 14, "a": "How do I install Docker on Ubuntu?", "b": "What are the steps to set up Docker on an Ubuntu machine?", "label": "same", "category": "paraphrase"}
+{"id": 15, "a": "Why is my internet so slow?", "b": "What could be causing my slow internet connection?", "label": "same", "category": "paraphrase"}
+{"id": 16, "a": "How do I make pancakes?", "b": "What's a simple pancake recipe?", "label": "same", "category": "paraphrase"}
+{"id": 17, "a": "What is machine learning?", "b": "Can you give me a definition of machine learning?", "label": "same", "category": "paraphrase"}
+{"id": 18, "a": "How many calories are in an apple?", "b": "What is the calorie count of one apple?", "label": "same", "category": "paraphrase"}
+{"id": 19, "a": "How do I convert Celsius to Fahrenheit?", "b": "What's the formula for turning Celsius into Fahrenheit?", "label": "same", "category": "paraphrase"}
+{"id": 20, "a": "What time zone is New York in?", "b": "Which time zone does New York use?", "label": "same", "category": "paraphrase"}
+{"id": 21, "a": "How can I improve my sleep?", "b": "What can I do to sleep better at night?", "label": "same", "category": "paraphrase"}
+{"id": 22, "a": "What is the speed of light?", "b": "How fast does light travel?", "label": "same", "category": "paraphrase"}
+{"id": 23, "a": "How do I merge two branches in git?", "b": "What's the command to combine two git branches?", "label": "same", "category": "paraphrase"}
+{"id": 24, "a": "What does an API gateway do?", "b": "Explain the purpose of an API gateway.", "label": "same", "category": "paraphrase"}
+{"id": 25, "a": "How do I center a div in CSS?", "b": "What's the way to horizontally and vertically center a div with CSS?", "label": "same", "category": "paraphrase"}
+{"id": 26, "a": "Can I get a refund?", "b": "Is it possible to have my money back?", "label": "same", "category": "paraphrase"}
+{"id": 27, "a": "What is exponential backoff?", "b": "Explain the exponential backoff retry strategy.", "label": "same", "category": "paraphrase"}
+{"id": 28, "a": "How do I change my email address?", "b": "Where can I update the email on my profile?", "label": "same", "category": "paraphrase"}
+{"id": 29, "a": "What is the population of Japan?", "b": "How many people live in Japan?", "label": "same", "category": "paraphrase"}
+{"id": 30, "a": "How do I write a for loop in JavaScript?", "b": "Show me the syntax of a for loop in JS.", "label": "same", "category": "paraphrase"}
+{"id": 31, "a": "Who wrote Pride and Prejudice?", "b": "Who is the author of Pride and Prejudice?", "label": "same", "category": "paraphrase"}
+{"id": 32, "a": "How do I contact customer support?", "b": "What is the best way to reach your support team?", "label": "same", "category": "paraphrase"}
+{"id": 33, "a": "What is a circuit breaker in software?", "b": "Explain the circuit breaker pattern in distributed systems.", "label": "same", "category": "paraphrase"}
+{"id": 34, "a": "How do I check my account balance?", "b": "Where can I see how much money is in my account?", "label": "same", "category": "paraphrase"}
+{"id": 35, "a": "What is inflation?", "b": "Can you explain what inflation means in economics?", "label": "same", "category": "paraphrase"}
+{"id": 36, "a": "How do I turn on two-factor authentication?", "b": "How can I enable 2FA on my account?", "label": "same", "category": "paraphrase"}
+{"id": 37, "a": "What is the boiling point of water?", "b": "At what temperature does water boil?", "label": "same", "category": "paraphrase"}
+{"id": 38, "a": "How do I read a CSV file in Python?", "b": "What's the way to load a CSV file with Python?", "label": "same", "category": "paraphrase"}
+{"id": 39, "a": "Is my data encrypted?", "b": "Do you encrypt the data I store with you?", "label": "same", "category": "paraphrase"}
+{"id": 40, "a": "How do I upgrade my plan?", "b": "What do I need to do to switch to a higher plan?", "label": "same", "category": "paraphrase"}
+{"id": 41, "a": "What does DNS stand for?", "b": "What is the full form of DNS?", "label": "same", "category": "paraphrase"}
+{"id": 42, "a": "How do I fix a flat bicycle tire?", "b": "What are the steps to repair a punctured bike tire?", "label": "same", "category": "paraphrase"}
+{"id": 43, "a": "What is the largest planet in the solar system?", "b": "Which planet is the biggest in our solar system?", "label": "same", "category": "paraphrase"}
+{"id": 44, "a": "How do I export my data?", "b": "Can I download all of the data you have about me?", "label": "same", "category": "paraphrase"}
+{"id": 45, "a": "What is a REST API?", "b": "Can you explain what a RESTful API is?", "label": "same", "category": "paraphrase"}
+{"id": 46, "a": "How do I remove a file in Linux?", "b": "What command deletes a file on Linux?", "label": "same", "category": "paraphrase"}
+{"id": 47, "a": "Do you offer student discounts?", "b": "Is there a reduced price for students?", "label": "same", "category": "paraphrase"}
+{"id": 48, "a": "How do I add a new user to my team?", "b": "What's the process for inviting a teammate to my workspace?", "label": "same", "category": "paraphrase"}
+{"id": 49, "a": "Why did my payment fail?", "b": "What are the reasons a card payment might be declined?", "label": "same", "category": "paraphrase"}
+{"id": 50, "a": "What is photosynthesis?", "b": "How do plants make food from sunlight?", "label": "same", "category": "paraphrase"}
+{"id": 51, "a": "How do I set up a VPN?", "b": "What are the steps to configure a VPN connection?", "label": "same", "category": "paraphrase"}
+{"id": 52, "a": "What's the difference between a list and a tuple in Python?", "b": "How is a Python tuple different from a list?", "label": "same", "category": "paraphrase"}
+{"id": 53, "a": "When was the Eiffel Tower built?", "b": "In what year was the Eiffel Tower constructed?", "label": "same", "category": "paraphrase"}
+{"id": 54, "a": "How do I unsubscribe from your newsletter?", "b": "Stop sending me marketing emails, how do I opt out?", "label": "same", "category": "paraphrase"}
+{"id": 55, "a": "What is the meaning of life?", "b": "What's the purpose of life?", "label": "same", "category": "paraphrase"}
+{"id": 56, "a": "How do I find out my IP address?", "b": "What is my public IP and how can I look it up?", "label": "same", "category": "paraphrase"}
+{"id": 57, "a": "Can you recommend a good book on statistics?", "b": "Which book would you suggest for learning statistics?", "label": "same", "category": "paraphrase"}
+{"id": 58, "a": "How do I rotate my API key?", "b": "What is the procedure for generating a new API key and revoking the old one?", "label": "same", "category": "paraphrase"}
+{"id": 59, "a": "What is the difference between a virus and a bacterium?", "b": "How do viruses differ from bacteria?", "label": "same", "category": "paraphrase"}
+{"id": 60, "a": "Why is the sky blue?", "b": "What makes the sky look blue during the day?", "label": "same", "category": "paraphrase"}
+{"id": 61, "a": "How do I schedule a meeting with your sales team?", "b": "I'd like to book a call with sales, how do I do that?", "label": "same", "category": "paraphrase"}
+{"id": 62, "a": "What is the capital of France?", "b": "What is the capital of Spain?", "label": "different", "category": "entity_swap"}
+{"id": 63, "a": "How do I install Docker on Ubuntu?", "b": "How do I install Docker on Windows?", "label": "different", "category": "entity_swap"}
+{"id": 64, "a": "What is the population of Japan?", "b": "What is the population of Brazil?", "label": "different", "category": "entity_swap"}
+{"id": 65, "a": "Who wrote Pride and Prejudice?", "b": "Who wrote Wuthering Heights?", "label": "different", "category": "entity_swap"}
+{"id": 66, "a": "How do I reverse a string in Python?", "b": "How do I reverse a string in Java?", "label": "different", "category": "entity_swap"}
+{"id": 67, "a": "When was the Eiffel Tower built?", "b": "When was the Statue of Liberty built?", "label": "different", "category": "entity_swap"}
+{"id": 68, "a": "What time zone is New York in?", "b": "What time zone is Tokyo in?", "label": "different", "category": "entity_swap"}
+{"id": 69, "a": "What is the boiling point of water?", "b": "What is the boiling point of ethanol?", "label": "different", "category": "entity_swap"}
+{"id": 70, "a": "How many calories are in an apple?", "b": "How many calories are in a banana?", "label": "different", "category": "entity_swap"}
+{"id": 71, "a": "What is the largest planet in the solar system?", "b": "What is the smallest planet in the solar system?", "label": "different", "category": "entity_swap"}
+{"id": 72, "a": "How do I read a CSV file in Python?", "b": "How do I read a JSON file in Python?", "label": "different", "category": "entity_swap"}
+{"id": 73, "a": "What does DNS stand for?", "b": "What does DHCP stand for?", "label": "different", "category": "entity_swap"}
+{"id": 74, "a": "What is the difference between TCP and UDP?", "b": "What is the difference between HTTP and HTTPS?", "label": "different", "category": "entity_swap"}
+{"id": 75, "a": "How do I merge two branches in git?", "b": "How do I delete a branch in git?", "label": "different", "category": "entity_swap"}
+{"id": 76, "a": "Translate 'I love cats' into French.", "b": "Translate 'I love cats' into German.", "label": "different", "category": "entity_swap"}
+{"id": 77, "a": "Is it safe to take ibuprofen with alcohol?", "b": "Is it safe to take ibuprofen without alcohol?", "label": "different", "category": "negation_or_opposite"}
+{"id": 78, "a": "How do I turn on two-factor authentication?", "b": "How do I turn off two-factor authentication?", "label": "different", "category": "negation_or_opposite"}
+{"id": 79, "a": "How do I subscribe to your newsletter?", "b": "How do I unsubscribe from your newsletter?", "label": "different", "category": "negation_or_opposite"}
+{"id": 80, "a": "How do I enable dark mode?", "b": "How do I disable dark mode?", "label": "different", "category": "negation_or_opposite"}
+{"id": 81, "a": "How do I add a new user to my team?", "b": "How do I remove a user from my team?", "label": "different", "category": "negation_or_opposite"}
+{"id": 82, "a": "Why did my payment succeed twice?", "b": "Why did my payment fail?", "label": "different", "category": "negation_or_opposite"}
+{"id": 83, "a": "How do I open a savings account?", "b": "How do I close a savings account?", "label": "different", "category": "negation_or_opposite"}
+{"id": 84, "a": "Should I buy or lease a car?", "b": "Should I sell or keep my car?", "label": "different", "category": "negation_or_opposite"}
+{"id": 85, "a": "How do I encrypt a file?", "b": "How do I decrypt a file?", "label": "different", "category": "negation_or_opposite"}
+{"id": 86, "a": "How do I lock my account?", "b": "How do I unlock my account?", "label": "different", "category": "negation_or_opposite"}
+{"id": 87, "a": "How do I reset my password?", "b": "How do I close my account?", "label": "different", "category": "same_topic_different_intent"}
+{"id": 88, "a": "How do I reset my password?", "b": "How do I change my email address?", "label": "different", "category": "same_topic_different_intent"}
+{"id": 89, "a": "How do I cancel my subscription?", "b": "How do I upgrade my subscription?", "label": "different", "category": "same_topic_different_intent"}
+{"id": 90, "a": "How do I cancel my subscription?", "b": "How much does my subscription cost?", "label": "different", "category": "same_topic_different_intent"}
+{"id": 91, "a": "Where can I find my invoices?", "b": "Where can I find my API keys?", "label": "different", "category": "same_topic_different_intent"}
+{"id": 92, "a": "What is a database index?", "b": "What is a database transaction?", "label": "different", "category": "same_topic_different_intent"}
+{"id": 93, "a": "What is a database index?", "b": "How do I drop a database index?", "label": "different", "category": "same_topic_different_intent"}
+{"id": 94, "a": "How long does shipping take?", "b": "How much does shipping cost?", "label": "different", "category": "same_topic_different_intent"}
+{"id": 95, "a": "How long does shipping take?", "b": "How do I track my shipment?", "label": "different", "category": "same_topic_different_intent"}
+{"id": 96, "a": "What are your opening hours?", "b": "What is your phone number?", "label": "different", "category": "same_topic_different_intent"}
+{"id": 97, "a": "Can I get a refund?", "b": "Can I get an invoice?", "label": "different", "category": "same_topic_different_intent"}
+{"id": 98, "a": "How do I update my credit card?", "b": "How do I remove my credit card?", "label": "different", "category": "same_topic_different_intent"}
+{"id": 99, "a": "How do I contact customer support?", "b": "How do I contact the sales team?", "label": "different", "category": "same_topic_different_intent"}
+{"id": 100, "a": "What is machine learning?", "b": "What are the limitations of machine learning?", "label": "different", "category": "same_topic_different_intent"}
+{"id": 101, "a": "How do I make pancakes?", "b": "How do I make crepes?", "label": "different", "category": "same_topic_different_intent"}
+{"id": 102, "a": "Is my data encrypted?", "b": "Who can access my data?", "label": "different", "category": "same_topic_different_intent"}
+{"id": 103, "a": "How do I check my account balance?", "b": "How do I transfer money from my account?", "label": "different", "category": "same_topic_different_intent"}
+{"id": 104, "a": "How do I export my data?", "b": "How do I import data from another service?", "label": "different", "category": "same_topic_different_intent"}
+{"id": 105, "a": "How do I fix a flat bicycle tire?", "b": "How do I fix a squeaky bicycle chain?", "label": "different", "category": "same_topic_different_intent"}
+{"id": 106, "a": "What is a REST API?", "b": "What is a GraphQL API?", "label": "different", "category": "same_topic_different_intent"}
+{"id": 107, "a": "What is the capital of France?", "b": "What is the population of France?", "label": "different", "category": "different_quantity_or_parameter"}
+{"id": 108, "a": "How do I convert Celsius to Fahrenheit?", "b": "How do I convert Fahrenheit to Celsius?", "label": "different", "category": "different_quantity_or_parameter"}
+{"id": 109, "a": "How many calories are in an apple?", "b": "How many calories are in ten apples?", "label": "different", "category": "different_quantity_or_parameter"}
+{"id": 110, "a": "Write a poem with four lines about the sea.", "b": "Write a poem with forty lines about the sea.", "label": "different", "category": "different_quantity_or_parameter"}
+{"id": 111, "a": "Summarise this article in one sentence.", "b": "Summarise this article in five paragraphs.", "label": "different", "category": "different_quantity_or_parameter"}
+{"id": 112, "a": "What is 15% of 200?", "b": "What is 50% of 200?", "label": "different", "category": "different_quantity_or_parameter"}
+{"id": 113, "a": "How do I schedule a meeting for Monday?", "b": "How do I schedule a meeting for Friday?", "label": "different", "category": "different_quantity_or_parameter"}
+{"id": 114, "a": "Give me a recipe for two servings.", "b": "Give me a recipe for twelve servings.", "label": "different", "category": "different_quantity_or_parameter"}
+{"id": 115, "a": "What was the weather like in 1990?", "b": "What was the weather like in 2020?", "label": "different", "category": "different_quantity_or_parameter"}
+{"id": 116, "a": "How do I upgrade to the Pro plan?", "b": "How do I upgrade to the Enterprise plan?", "label": "different", "category": "different_quantity_or_parameter"}
+{"id": 117, "a": "How do I reset my password?", "b": "How do I reset my router?", "label": "different", "category": "shared_words_unrelated"}
+{"id": 118, "a": "How do I close my account?", "b": "How do I close a file in Python?", "label": "different", "category": "shared_words_unrelated"}
+{"id": 119, "a": "What is a bank?", "b": "What is a river bank?", "label": "different", "category": "shared_words_unrelated"}
+{"id": 120, "a": "How do I charge my phone faster?", "b": "How do I charge a customer in Stripe?", "label": "different", "category": "shared_words_unrelated"}
+{"id": 121, "a": "Is Python hard to learn?", "b": "Is a python snake dangerous to humans?", "label": "different", "category": "shared_words_unrelated"}

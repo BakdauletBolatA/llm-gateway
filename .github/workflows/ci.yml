@@ -21,8 +21,8 @@ jobs:
           cache: pip
       - name: Install
         run: python -m pip install -e ".[dev]"
-      - run: ruff check src tests scripts
-      - run: ruff format --check src tests scripts
+      - run: ruff check src tests scripts eval eval.py loadtest
+      - run: ruff format --check src tests scripts eval eval.py loadtest
       - run: mypy
 
   test:
@@ -111,3 +111,33 @@ jobs:
         run: docker compose --profile ollama config --quiet
       - name: Validate the replica profile
         run: docker compose --profile replica config --quiet
+      - name: Validate the observability profile
+        run: docker compose --profile observability config --quiet
+
+  compose-boot:
+    name: docker compose up from scratch
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and start the default stack
+        run: docker compose up -d --build
+      - name: Wait for the gateway
+        run: |
+          for _ in $(seq 1 60); do
+            curl -sf http://127.0.0.1:8080/readyz && exit 0
+            sleep 2
+          done
+          echo "gateway never became ready" >&2
+          exit 1
+      - name: Answer a chat request through the mock
+        run: |
+          curl -sf http://127.0.0.1:8080/v1/chat/completions \
+            -H 'content-type: application/json' \
+            -d '{"model":"chaos-default","messages":[{"role":"user","content":"Hello"}]}' \
+            | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['choices'][0]['message']['content']; print(d['gateway']['provider'])"
+      - name: Logs on failure
+        if: failure()
+        run: docker compose logs --no-color --tail 200
+      - name: Tear down
+        if: always()
+        run: docker compose down -v

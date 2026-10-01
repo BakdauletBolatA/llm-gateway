@@ -1,19 +1,20 @@
 """Embedders for the semantic cache.
 
-The default is a deterministic local hashing vectoriser: no model weights, no
-network call, identical vectors in CI and in production, and it works with zero
-paid keys. It captures lexical and paraphrase-level similarity ("What is the
-capital of France?" vs "whats the capital of france") — not deep semantics.
-That limitation is deliberate and is stated in RELIABILITY.md next to the cache
-numbers, because a cache hit rate is meaningless without knowing what counts as
-"similar".
+`SentenceTransformerEmbedder` is the one to use for semantic matching: a small
+local model that runs on CPU, with no API key and no network call at request time.
 
-`Embedder` is a protocol, and `OllamaEmbedder` is a drop-in that uses a real
-embedding model when Ollama is running.
+`HashingEmbedder` is the default for exact matching and for the benchmark: a
+deterministic vectoriser with no model weights. It sees words, not meaning, so
+"capital of France" and "capital of Spain" look alike; config validation refuses
+semantic matching on it unless the run is explicitly a benchmark.
+
+`Embedder` is a protocol, and `OllamaEmbedder` is a drop-in that uses an
+embedding model served by Ollama.
 """
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import itertools
 import math
@@ -111,6 +112,43 @@ class OllamaEmbedder:
             )
         norm = math.sqrt(sum(component * component for component in vector))
         return [component / norm for component in vector] if norm else vector
+
+
+class SentenceTransformerEmbedder:
+    """A local sentence-transformers model. Needs `pip install -e .[embeddings]`."""
+
+    name = "sentence-transformers"
+
+    def __init__(self, model_name: str, dim: int) -> None:
+        from sentence_transformers import SentenceTransformer
+
+        self._model = SentenceTransformer(model_name, device="cpu")
+        # Renamed in sentence-transformers 5; the old name still works but warns.
+        width = getattr(self._model, "get_embedding_dimension", None)
+        actual = (width or self._model.get_sentence_embedding_dimension)()
+        if actual != dim:
+            raise ValueError(f"model {model_name} produces dim={actual}, config expects dim={dim}")
+        self.dim = dim
+
+    def embed_sync(self, text: str) -> list[float]:
+        vector = self._model.encode(text, normalize_embeddings=True)
+        return [float(value) for value in vector]
+
+    async def embed(self, text: str) -> list[float]:
+        # encode() is CPU-bound; on the event loop it would stall every other request.
+        return await asyncio.to_thread(self.embed_sync, text)
+
+
+def fit_to_column(vector: list[float], width: int) -> list[float]:
+    """Zero-pad to the pgvector column width.
+
+    Padding with zeros changes neither dot products nor norms, so cosine
+    similarity is exactly what it was. Truncating would change it, so a vector
+    wider than the column is an error.
+    """
+    if len(vector) > width:
+        raise ValueError(f"embedding has {len(vector)} dimensions; the cache column holds {width}")
+    return vector + [0.0] * (width - len(vector))
 
 
 def cosine_similarity(left: list[float], right: list[float]) -> float:

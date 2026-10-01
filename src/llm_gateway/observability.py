@@ -53,6 +53,11 @@ def _gauge(name: str, doc: str, labels: tuple[str, ...] = ()) -> Gauge:
 REQUESTS = _counter(
     "llm_gateway_requests_total", "Requests served, by route and outcome", ("route", "outcome")
 )
+ROUTING_DECISIONS = _counter(
+    "llm_gateway_routing_decisions_total",
+    "Complexity router decisions, by the tier a request was sent to",
+    ("tier",),
+)
 REQUEST_ERRORS = _counter(
     "llm_gateway_request_errors_total", "Failed requests, by error kind", ("route", "kind")
 )

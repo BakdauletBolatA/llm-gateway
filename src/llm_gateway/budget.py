@@ -196,6 +196,8 @@ class BudgetTracker:
                     .group_by(LlmCall.api_key_id)
                 )
                 for key_id, spend in rows.all():
+                    if key_id is None:
+                        continue
                     self._by_key.setdefault(key_id, _Counter()).from_db = float(spend or 0.0)
 
                 if self.shared:

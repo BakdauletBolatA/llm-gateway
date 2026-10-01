@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Iterable
 from pathlib import Path
 
 from alembic import command
@@ -15,12 +16,25 @@ from alembic.config import Config
 
 logger = logging.getLogger(__name__)
 
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
+
+def find_project_root(starts: Iterable[Path]) -> Path:
+    """The directory holding alembic.ini and migrations/, searched upward from each start.
+
+    Counting parents of this file works in a checkout and breaks in the Docker
+    image, where `pip install .` puts the code in site-packages and the migrations
+    stay in the working directory.
+    """
+    for start in starts:
+        for directory in (start, *start.parents):
+            if (directory / "alembic.ini").is_file() and (directory / "migrations").is_dir():
+                return directory
+    raise FileNotFoundError("alembic.ini and migrations/ not found; run from the project root")
 
 
 def _alembic_config(dsn: str) -> Config:
-    config = Config(str(PROJECT_ROOT / "alembic.ini"))
-    config.set_main_option("script_location", str(PROJECT_ROOT / "migrations"))
+    root = find_project_root([Path(__file__).resolve(), Path.cwd()])
+    config = Config(str(root / "alembic.ini"))
+    config.set_main_option("script_location", str(root / "migrations"))
     config.set_main_option("sqlalchemy.url", dsn)
     # Leave the app's logging alone: see the note in migrations/env.py.
     config.attributes["configure_logging"] = False

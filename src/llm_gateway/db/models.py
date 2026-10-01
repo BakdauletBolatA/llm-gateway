@@ -122,6 +122,10 @@ class BudgetPeriod(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+#: Width of semantic_cache.embedding. Narrower embedders are zero-padded to it.
+EMBEDDING_COLUMN_DIM = 384
+
+
 class SemanticCacheEntry(Base):
     __tablename__ = "semantic_cache"
 
@@ -129,7 +133,7 @@ class SemanticCacheEntry(Base):
     scope: Mapped[str] = mapped_column(String(160), index=True)
     prompt_hash: Mapped[str] = mapped_column(String(64), index=True)
     prompt_text: Mapped[str] = mapped_column(Text)
-    embedding: Mapped[list[float]] = mapped_column(Vector(256))
+    embedding: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_COLUMN_DIM))
 
     response_text: Mapped[str] = mapped_column(Text)
     provider: Mapped[str] = mapped_column(String(64))

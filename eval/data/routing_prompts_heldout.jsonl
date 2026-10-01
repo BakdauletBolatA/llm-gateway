@@ -1,0 +1,30 @@
+{"id": 1, "label": "simple", "prompt": "What is the capital of Canada?", "check": {"any": ["ottawa"]}}
+{"id": 2, "label": "simple", "prompt": "How many legs does a spider have?", "check": {"regex": "\\b(8|eight)\\b"}}
+{"id": 3, "label": "simple", "prompt": "Which ocean lies between Africa and Australia?", "check": {"any": ["indian"]}}
+{"id": 4, "label": "simple", "prompt": "What is the French word for 'cat'?", "check": {"any": ["chat"]}}
+{"id": 5, "label": "simple", "prompt": "Name the author of the novel '1984'.", "check": {"any": ["orwell"]}}
+{"id": 6, "label": "simple", "prompt": "What is the boiling point of water in degrees Celsius at sea level?", "check": {"regex": "\\b100\\b"}}
+{"id": 7, "label": "simple", "prompt": "What is the sum of 2 and 3?", "check": {"regex": "\\b(5|five)\\b"}}
+{"id": 8, "label": "simple", "prompt": "What is the main ingredient in guacamole?", "check": {"any": ["avocado"]}}
+{"id": 9, "label": "simple", "prompt": "Is the sun a star or a planet?", "check": {"all": ["star"]}}
+{"id": 10, "label": "simple", "prompt": "What does the acronym 'HTML' stand for?", "check": {"any": ["hypertext markup language"]}}
+{"id": 11, "label": "simple", "prompt": "Maria woke early on Tuesday and walked to the harbour in Lisbon, where her father kept a small boat. The morning was cold, and the fishermen were already arguing about the price of sardines. She bought a coffee at the kiosk, watched the gulls, and then helped her father untie the ropes. In which city does this story take place?", "check": {"any": ["lisbon"]}}
+{"id": 12, "label": "simple", "prompt": "What is the currency of Japan?", "check": {"any": ["yen"]}}
+{"id": 13, "label": "simple", "prompt": "What is the first letter of the English alphabet?", "check": {"regex": "\\b[Aa]\\b"}}
+{"id": 14, "label": "simple", "prompt": "Name one primary colour.", "check": {"any": ["red", "blue", "yellow"]}}
+{"id": 15, "label": "simple", "prompt": "Who was the first person to walk on the Moon?", "check": {"any": ["armstrong"]}}
+{"id": 16, "label": "complex", "prompt": "Is 91 a prime number? End your reply with 'Answer: yes' or 'Answer: no'.", "check": {"regex": "Answer:\\s*[Nn]o"}}
+{"id": 17, "label": "complex", "prompt": "Which is larger, 9.11 or 9.9? End your reply with 'Answer: <number>'.", "check": {"number": 9.9}}
+{"id": 18, "label": "complex", "prompt": "A bat and a ball cost $1.10 in total. The bat costs $1.00 more than the ball. How many cents does the ball cost? End your reply with 'Answer: <number>'.", "check": {"number": 5}}
+{"id": 19, "label": "complex", "prompt": "Convert 3.5 hours to minutes. End your reply with 'Answer: <number>'.", "check": {"number": 210}}
+{"id": 20, "label": "complex", "prompt": "What is the square root of 144? End your reply with 'Answer: <number>'.", "check": {"number": 12}}
+{"id": 21, "label": "complex", "prompt": "A car uses 8 litres of fuel per 100 km. How many litres does it need for 250 km? End your reply with 'Answer: <number>'.", "check": {"number": 20}}
+{"id": 22, "label": "complex", "prompt": "What is 48 divided by 6, plus 7? End your reply with 'Answer: <number>'.", "check": {"number": 15}}
+{"id": 23, "label": "complex", "prompt": "Write a Python function count_vowels(s) that returns the number of vowels in the string s.", "check": {"regex": "def\\s+count_vowels", "all": ["return"], "any": ["aeiou", "'a'", "\"a\""]}}
+{"id": 24, "label": "complex", "prompt": "Write a JavaScript function that returns the sum of an array of numbers.", "check": {"regex": "(function|=>)", "any": ["reduce", "for", "+="]}}
+{"id": 25, "label": "complex", "prompt": "Explain why a hash table lookup is usually O(1) but can degrade. Mention collisions.", "check": {"all": ["collision"], "any": ["o(n)", "linear", "worst"]}}
+{"id": 26, "label": "complex", "prompt": "Compare processes and containers. Mention isolation.", "check": {"all": ["container", "isolat"]}}
+{"id": 27, "label": "complex", "prompt": "Why do databases use write-ahead logging? Mention crash recovery.", "check": {"all": ["log", "recover"]}}
+{"id": 28, "label": "complex", "prompt": "Which is heavier, a kilogram of feathers or a kilogram of iron? Explain.", "check": {"any": ["same", "equal", "neither"]}}
+{"id": 29, "label": "complex", "prompt": "Explain the difference between 'is' and '==' in Python.", "check": {"all": ["=="], "any": ["identity", "same object", "memory"]}}
+{"id": 30, "label": "complex", "prompt": "Write a SQL query that counts the number of orders per customer from a table orders(customer_id, id).", "check": {"all": ["group by", "customer_id", "count"]}}

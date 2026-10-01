@@ -1,0 +1,74 @@
+{
+  "target": "mock",
+  "scenario": "kill",
+  "route": "mock-two-hop",
+  "backend": "mock provider",
+  "users": 4,
+  "max_tokens": 64,
+  "duration_s": 60.3,
+  "kill_at_s": 30.0,
+  "started_at": "2026-10-01T14:18:42.455065+00:00",
+  "git_sha": "bc11a33",
+  "environment": {
+    "platform": "macOS-15.7.9-arm64-arm-64bit",
+    "cpu_count": 8,
+    "python": "3.12.14"
+  },
+  "notes": {
+    "killed_at_wall": "2026-10-01T14:19:12.456825+00:00"
+  },
+  "results": {
+    "requests": 2509,
+    "success_rate": 1.0,
+    "requests_per_s": 41.63,
+    "latency_ms": {
+      "p50": 90.7,
+      "p95": 131.6,
+      "p99": 240.0
+    },
+    "latency_ms_all_requests": {
+      "p50": 90.7,
+      "p95": 131.6,
+      "p99": 240.0
+    },
+    "status_counts": {
+      "200": 2509
+    },
+    "provider_share": {
+      "mock_primary": 0.5229,
+      "mock_secondary": 0.4771
+    },
+    "before_kill": {
+      "requests": 1321,
+      "success_rate": 1.0,
+      "requests_per_s": 44.03,
+      "latency_ms": {
+        "p50": 89.9,
+        "p95": 128.1,
+        "p99": 132.5
+      },
+      "provider_share": {
+        "mock_primary": 0.9932,
+        "mock_secondary": 0.0068
+      }
+    },
+    "after_kill": {
+      "requests": 1188,
+      "success_rate": 1.0,
+      "requests_per_s": 39.24,
+      "latency_ms": {
+        "p50": 91.9,
+        "p95": 197.1,
+        "p99": 262.3
+      },
+      "provider_share": {
+        "mock_secondary": 1.0
+      }
+    },
+    "failover": {
+      "provider_killed": "mock_primary",
+      "failed_requests_after_kill": 0,
+      "seconds_to_first_success_from_other_provider": 0.0
+    }
+  }
+}

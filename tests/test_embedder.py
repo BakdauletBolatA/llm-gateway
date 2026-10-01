@@ -31,7 +31,7 @@ def test_identical_text_is_maximally_similar() -> None:
 
 
 def test_punctuation_and_case_differences_stay_above_the_configured_threshold() -> None:
-    # config/gateway.yaml uses 0.60 (see scripts/calibrate_cache_threshold.py).
+    # The benchmark scripts run the lexical matcher at 0.60 (scripts/calibrate_cache_threshold.py).
     assert similarity("What is the capital of France?", "whats the capital of france") > 0.60
 
 
@@ -80,3 +80,24 @@ def test_same_topic_different_phrasing_is_closer_than_a_different_topic() -> Non
         "Write a haiku about autumn rain.",
     )
     assert same_topic > other_topic + 0.3
+
+
+def test_padding_to_the_column_width_does_not_change_cosine_similarity() -> None:
+    from llm_gateway.cache.embedder import fit_to_column
+
+    left = EMBEDDER.embed_sync("What is the capital of France?")
+    right = EMBEDDER.embed_sync("whats the capital of france")
+    padded_left, padded_right = fit_to_column(left, 384), fit_to_column(right, 384)
+    assert len(padded_left) == len(padded_right) == 384
+    assert (
+        abs(cosine_similarity(padded_left, padded_right) - cosine_similarity(left, right)) < 1e-12
+    )
+
+
+def test_a_vector_wider_than_the_column_is_refused_not_truncated() -> None:
+    import pytest
+
+    from llm_gateway.cache.embedder import fit_to_column
+
+    with pytest.raises(ValueError, match="384"):
+        fit_to_column([0.1] * 768, 384)

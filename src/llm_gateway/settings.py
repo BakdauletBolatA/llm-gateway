@@ -145,13 +145,18 @@ class CacheConfig(ConfigModel):
     #: Кэш обслуживает только запросы, где клиент явно передал "cache": true.
     #: Ответ на чужой вопрос хуже промаха, поэтому по умолчанию согласие не предполагается.
     require_opt_in: bool = True
+    #: 0.93 — порог из eval/cache_eval.py для MiniLM при допуске 5% ложных попаданий:
+    #: hit rate 12.9%, 1 ложное попадание из 30 пар отложенной выборки. Безопасного
+    #: порога нет: пары «enable/disable» и «C->F / F->C» дают 0.93-0.995.
     similarity_threshold: float = Field(default=0.93, gt=0.0, le=1.0)
     ttl_s: int = Field(default=900, ge=1)
     max_temperature: float = 0.3
     embedding_dim: int = Field(default=256, ge=16, le=2000)
     candidate_limit: int = Field(default=5, ge=1)
-    embedder: Literal["hashing", "ollama"] = "hashing"
+    embedder: Literal["hashing", "ollama", "sentence-transformers"] = "hashing"
     ollama_embed_model: str = "nomic-embed-text"
+    #: Для embedder: sentence-transformers. Размерность 384 — у этой модели.
+    sentence_transformer_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     #: Как часто удалять протухшие записи. TTL только фильтрует их в выдаче, так
     #: что без уборки таблица растёт вечно, а поиск замедляется: замер — 3.8 мс
     #: при пустой таблице против 12.8 мс при 20 000 протухших строк. 0 — выключить.
@@ -169,7 +174,7 @@ class CacheConfig(ConfigModel):
                 "reliability.cache.match=semantic with embedder=hashing serves answers to "
                 "different questions that share most of their words ('capital of France' / "
                 "'capital of Spain' score 0.775). Use match=exact, a real embedder "
-                "(embedder=ollama) with a calibrated threshold, or set "
+                "(embedder=sentence-transformers) with a calibrated threshold, or set "
                 "allow_lexical_semantic=true if this is a benchmark on a controlled workload"
             )
         return self
@@ -233,6 +238,85 @@ class ProviderConfig(ConfigModel):
 class RouteTarget(ConfigModel):
     provider: str
     model: str
+
+
+class ComplexityRouterConfig(ConfigModel):
+    """Rule-based choice between a small and a large route, by how hard the request looks.
+
+    A request that names `route_name` ("auto") is scored from the last user
+    message; the score is a sum of the points below, and a score at or above
+    `large_threshold` goes to the large route. The decision and the reasons that
+    produced it are returned with every response.
+    """
+
+    enabled: bool = False
+    route_name: str = "auto"
+    small_route: str = "small"
+    large_route: str = "large"
+    large_threshold: int = Field(default=3, ge=1)
+
+    medium_chars: int = Field(default=250, ge=1)
+    long_chars: int = Field(default=600, ge=1)
+    medium_points: int = 1
+    long_points: int = 2
+    code_points: int = 3
+    reasoning_points: int = 3
+    math_points: int = 3
+    multi_part_points: int = 1
+    turns_points: int = 1
+    long_conversation_turns: int = Field(default=5, ge=1)
+
+    code_markers: list[str] = Field(
+        default_factory=lambda: [
+            "```",
+            r"\bdef \w+\(",
+            r"\bclass \w+",
+            r"\bfunction\b",
+            r"\bpython\b",
+            r"\bjavascript\b",
+            r"\bsql\b",
+            r"\bregex\b",
+            r"\bscript\b",
+            r"\bcode\b",
+            r"\bcompile\b",
+            r"\bbug\b",
+            r"\balgorithm\b",
+        ]
+    )
+    reasoning_markers: list[str] = Field(
+        default_factory=lambda: [
+            r"step[- ]by[- ]step",
+            r"\bwhy\b",
+            r"\bexplain\b",
+            r"\bprove\b",
+            r"\bderive\b",
+            r"\banaly[sz]e\b",
+            r"\bcompare\b",
+            r"\btrade-?offs?\b",
+            r"\bpros and cons\b",
+            r"\bdesign\b",
+            r"\bevaluate\b",
+            r"\bjustify\b",
+        ]
+    )
+    math_markers: list[str] = Field(
+        default_factory=lambda: [
+            r"\d\s*[-+*/^=×÷]\s*\d",
+            # No trailing \b: "%" is not a word character, so "40%\b" never matches.
+            r"\d+(\.\d+)?\s*%",
+            r"[$€£]\s*\d",
+            r"\b\d+(\.\d+)?\s*(km|kg|cm|mm|litres?|liters?|hours?|minutes?|miles|percent)\b",
+            # A quantity question only counts as arithmetic when there is a number to work with.
+            r"\d[\s\S]*\bhow (much|many|old)\b|\bhow (much|many|old)\b[\s\S]*\d",
+            r"\b(calculate|solve|probability|equation|integral|derivative)\b",
+        ]
+    )
+
+    @model_validator(mode="after")
+    def _two_distinct_routes(self) -> ComplexityRouterConfig:
+        if self.enabled and self.small_route == self.large_route:
+            raise ValueError("routing.complexity needs two different routes, small and large")
+        return self
 
 
 class RouteConfig(ConfigModel):
@@ -324,6 +408,10 @@ class AppConfig(ConfigModel):
     slow_request_ms: int = 5000
 
 
+class ComplexityRoutingSection(ConfigModel):
+    complexity: ComplexityRouterConfig = Field(default_factory=ComplexityRouterConfig)
+
+
 class Settings(ConfigModel):
     app: AppConfig = Field(default_factory=AppConfig)
     database: DatabaseConfig
@@ -333,6 +421,7 @@ class Settings(ConfigModel):
     providers: dict[str, ProviderConfig]
     routes: RoutesConfig
     pricing: PricingConfig = Field(default_factory=PricingConfig)
+    routing: ComplexityRoutingSection = Field(default_factory=lambda: ComplexityRoutingSection())
 
     @model_validator(mode="after")
     def _routes_reference_known_providers(self) -> Settings:
@@ -342,6 +431,15 @@ class Settings(ConfigModel):
                     raise ValueError(
                         f"route {route_name!r} references unknown provider {hop.provider!r}"
                     )
+        router = self.routing.complexity
+        if router.enabled:
+            for name in (router.small_route, router.large_route):
+                if name not in self.routes.definitions:
+                    raise ValueError(f"routing.complexity references unknown route {name!r}")
+            if router.route_name in self.routes.definitions:
+                raise ValueError(
+                    f"routing.complexity.route_name={router.route_name!r} is also a real route"
+                )
         return self
 
     def resolve_chain(self, route_name: str) -> list[RouteTarget]:

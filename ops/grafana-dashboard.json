@@ -465,6 +465,43 @@
           "legendFormat": "потеряно записей"
         }
       ]
+    },
+    {
+      "type": "row",
+      "title": "Роутинг по сложности",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 38
+      },
+      "collapsed": false
+    },
+    {
+      "type": "timeseries",
+      "title": "Решения роутера: малая / большая модель, запросов/с",
+      "description": "Запросы с model=auto, разложенные по тому, куда их отправил роутер (src/llm_gateway/complexity.py). Причины каждого решения — в заголовке X-Gateway-Route-Decision.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 39
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (tier) (rate(llm_gateway_routing_decisions_total[5m]))",
+          "legendFormat": "{{tier}}"
+        }
+      ]
     }
   ]
 }

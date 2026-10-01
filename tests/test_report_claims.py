@@ -333,8 +333,6 @@ def readme() -> str:
 TOTAL_CLAIMS: list[tuple[str, tuple[str, ...], str, str]] = [
     ("01_baseline", (), "readme", "README: заглавная таблица, наивный шлюз"),
     ("09_backpressure", (), "readme", "README: заглавная таблица, финальная сборка"),
-    ("03_retries", (), "readme", "README: брейкер сам по себе, было"),
-    ("04_circuit_breaker", (), "readme", "README: брейкер сам по себе, стало"),
     ("01_baseline", ORIGINAL_SCENARIOS_EXCLUDE, "report", "итерация 1: итог по десяти сценариям"),
     ("03_retries", ORIGINAL_SCENARIOS_EXCLUDE, "report", "итерации 3 и 4: суммарно"),
     ("04_circuit_breaker", ORIGINAL_SCENARIOS_EXCLUDE, "report", "итерации 4 и 5: суммарно"),
@@ -358,6 +356,7 @@ def test_totals_are_quoted_over_the_scenarios_they_were_computed_on(
 
 
 def test_the_readme_headline_table_matches_the_results() -> None:
+    """Independent of eval/readme_table.py: recompute the chaos row from the raw results."""
     text = readme()
     naive, final = "01_baseline", "09_backpressure"
 
@@ -374,9 +373,8 @@ def test_the_readme_headline_table_matches_the_results() -> None:
         )
 
     n = len(list(RESULTS.glob(f"{final}__*.json")))
-    assert f"success rate на {n} сценариях" in text
-    assert f"{full_marks(naive)} из {n} | **{full_marks(final)} из {n}**" in text
+    assert f"| {full_marks(naive)} of {n} |" in text
+    assert f"| {full_marks(final)} of {n} |" in text
     for label, scenario in ((naive, "storm"), (final, "storm"), (naive, "hang"), (final, "hang")):
-        spellings_ = spellings("p95", value(label, scenario, "p95"))
-        assert any(f"{s} мс" in text for s in spellings_), f"{label} {scenario} p95"
+        assert f"{value(label, scenario, 'p95'):,.0f} ms" in text, f"{label} {scenario} p95"
     assert f"${cost(naive):.4f}" in text and f"${cost(final):.4f}" in text

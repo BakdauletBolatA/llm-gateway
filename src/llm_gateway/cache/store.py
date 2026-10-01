@@ -1,7 +1,8 @@
 """Response cache backed by pgvector.
 
-Every entry lives in a scope: route, model, tenant and a hash of the conversation
-context (system prompt and earlier turns). Inside a scope the last user message is
+Every entry lives in a scope: route, model, tenant, generation parameters (max_tokens,
+temperature, stop) and a hash of the conversation context (system prompt and
+earlier turns). Inside a scope the last user message is
 matched either exactly, after normalising case, punctuation and whitespace, or
 semantically, as a cosine-distance nearest neighbour above an explicit threshold.
 
@@ -13,8 +14,9 @@ gets an answer written for someone else.
 The TTL only filters expired rows out of the result; it does not remove them, so
 they have to be swept. Left alone they are pure cost — nothing may ever be served
 from them, and the search still has to walk past them. Measured on this stand with
-an exact-match lookup: 3.8 ms at zero expired rows against 12.8 ms at 20 000, with
-the table 29 MB larger. At a 15-minute TTL that is well under an hour of traffic.
+an exact-match lookup: 3.6 ms at zero expired rows against 13.5 ms at 20 000, with
+the table 23 MB larger (bench/probes/cache_sweep_off.json). At a 15-minute TTL that is
+well under an hour of traffic.
 """
 
 from __future__ import annotations
@@ -22,6 +24,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import hashlib
+import json
 import logging
 from collections.abc import Coroutine
 from dataclasses import dataclass
@@ -30,8 +33,8 @@ from typing import Any
 
 from sqlalchemy import delete, select, update
 
-from llm_gateway.cache.embedder import Embedder, normalise
-from llm_gateway.db.models import SemanticCacheEntry
+from llm_gateway.cache.embedder import Embedder, fit_to_column, normalise
+from llm_gateway.db.models import EMBEDDING_COLUMN_DIM, SemanticCacheEntry
 from llm_gateway.db.session import Database
 from llm_gateway.settings import CacheConfig
 
@@ -87,10 +90,12 @@ class SemanticCache:
         tenant: str | None,
         context: str,
         query: str,
+        params: dict[str, Any] | None = None,
     ) -> CacheKey:
         """Scope everything the answer depends on; match only the question itself."""
         context_digest = cls._hash(normalise(context))[:16] if context else "none"
-        scope = f"{route}:{model}:{tenant or PUBLIC_TENANT}:{context_digest}"
+        params_digest = cls._hash(json.dumps(params or {}, sort_keys=True))[:12]
+        scope = f"{route}:{model}:{tenant or PUBLIC_TENANT}:{context_digest}:{params_digest}"
         if len(scope) > MAX_SCOPE_LENGTH:
             scope = f"{route[:40]}:{cls._hash(scope)}"
         return CacheKey(scope=scope, query=query)
@@ -120,7 +125,9 @@ class SemanticCache:
                         return None
                     similarity = 1.0
                 else:
-                    vector = await self.embedder.embed(key.query)
+                    vector = fit_to_column(
+                        await self.embedder.embed(key.query), EMBEDDING_COLUMN_DIM
+                    )
                     distance = SemanticCacheEntry.embedding.cosine_distance(vector)
                     rows = await session.execute(
                         select(SemanticCacheEntry, distance.label("distance"))
@@ -173,7 +180,7 @@ class SemanticCache:
     ) -> None:
         try:
             scope, prompt = key.scope, key.query
-            vector = await self.embedder.embed(prompt)
+            vector = fit_to_column(await self.embedder.embed(prompt), EMBEDDING_COLUMN_DIM)
             expires_at = datetime.now(UTC) + timedelta(seconds=self.config.ttl_s)
             # Normalised, so the exact matcher and the duplicate check below agree on
             # what "the same question" is.

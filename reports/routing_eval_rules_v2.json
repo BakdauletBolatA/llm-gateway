@@ -1,0 +1,80 @@
+{
+  "prompts": 50,
+  "requests_modeled": 100,
+  "policies": {
+    "always_small": {
+      "passed": 41,
+      "pass_rate": 0.82,
+      "pass_rate_ci95": [
+        0.692,
+        0.902
+      ],
+      "modeled_cost_usd_per_100": 0.0022878,
+      "mean_output_tokens": 29.8,
+      "mean_latency_ms": 1279.0,
+      "share_to_small": 1.0
+    },
+    "always_large": {
+      "passed": 49,
+      "pass_rate": 0.98,
+      "pass_rate_ci95": [
+        0.895,
+        0.996
+      ],
+      "modeled_cost_usd_per_100": 0.03357,
+      "mean_output_tokens": 25.2,
+      "mean_latency_ms": 5711.1,
+      "share_to_small": 0.0
+    },
+    "routed": {
+      "passed": 47,
+      "pass_rate": 0.94,
+      "pass_rate_ci95": [
+        0.838,
+        0.979
+      ],
+      "modeled_cost_usd_per_100": 0.0249112,
+      "mean_output_tokens": 25.0,
+      "mean_latency_ms": 4936.3,
+      "share_to_small": 0.52
+    }
+  },
+  "router_vs_labels": {
+    "accuracy": 0.98,
+    "complex_sent_to_small": 1,
+    "simple_sent_to_large": 0
+  },
+  "paired_routed_vs_always_large": {
+    "routed_wrong_large_right": 2,
+    "routed_right_large_wrong": 0
+  },
+  "passed_by_label_and_model": {
+    "simple": {
+      "small": 24,
+      "large": 25,
+      "prompts": 25
+    },
+    "complex": {
+      "small": 17,
+      "large": 24,
+      "prompts": 25
+    }
+  },
+  "reference_prices_usd_per_mtok": {
+    "small": {
+      "model": "gpt-4o-mini",
+      "input": 0.15,
+      "output": 0.6
+    },
+    "large": {
+      "model": "gpt-4o",
+      "input": 2.5,
+      "output": 10.0
+    }
+  },
+  "local_models": {
+    "small": "qwen2.5:0.5b",
+    "large": "qwen2.5:3b"
+  },
+  "note": "Rules v2: percent sign, currency and quantity questions fixed after seeing v1 fail on this same set, and criteria 36/48 corrected. Optimistic, not held out; see routing_heldout.json."
+}

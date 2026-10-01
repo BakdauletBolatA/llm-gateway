@@ -129,7 +129,9 @@ reliability:
     scope: ${RATE_LIMIT_SCOPE:-local}
 
   cache:
-    enabled: true
+    # Выключен: кэш отдаёт сохранённые ответы, и включать его нужно осознанно.
+    # Бенчмарки включают его явно: GW__RELIABILITY__CACHE__ENABLED=true.
+    enabled: false
     # Ответ из кэша получает только клиент, передавший "cache": true, и только в
     # своём scope: маршрут, модель, API-ключ и хеш контекста (system prompt и
     # предыдущие реплики). Сопоставляется последний вопрос пользователя.
@@ -143,9 +145,9 @@ reliability:
     # Для настоящего смыслового кэша: embedder: ollama и перекалиброванный порог.
     match: exact
     require_opt_in: true
-    # Порог для match: semantic. 0.60 откалиброван scripts/calibrate_cache_threshold.py
-    # на воркладе бенчмарка и больше ни на что не переносится.
-    similarity_threshold: 0.60
+    # Порог для match: semantic; по умолчанию берётся из кода. 0.60 откалиброван
+    # на воркладе бенчмарка и больше ни на что не переносится — его задают скрипты
+    # бенчмарка через GW__RELIABILITY__CACHE__SIMILARITY_THRESHOLD.
     ttl_s: 900
     max_temperature: 0.3     # выше — запрос считается «творческим», не кэшируем
     embedding_dim: 256
@@ -187,6 +189,12 @@ providers:
     type: ollama
     base_url: ${OLLAMA_BASE_URL:-http://ollama:11434}
     enabled: ${OLLAMA_ENABLED:-false}
+  # Второй сервер Ollama: нужен, чтобы остановка первого в нагрузочном тесте имела
+  # куда переключиться, оставаясь живой моделью. Поднимается тем же профилем.
+  ollama_secondary:
+    type: ollama
+    base_url: ${OLLAMA_SECONDARY_BASE_URL:-http://ollama-secondary:11434}
+    enabled: ${OLLAMA_ENABLED:-false}
 
 routes:
   default: chaos-default
@@ -214,12 +222,49 @@ routes:
         - provider: anthropic
           model: claude-haiku-4-5
         - provider: ollama
-          model: llama3.2
+          model: ${OLLAMA_MODEL:-qwen2.5:0.5b}
     # Только локальная модель — работает без единого платного ключа.
     local-only:
       chain:
         - provider: ollama
-          model: llama3.2
+          model: ${OLLAMA_MODEL:-qwen2.5:0.5b}
+    # Два сервера живой модели: отказ первого переключает на второй. Используется
+    # нагрузочным тестом, loadtest/run.py.
+    live-local:
+      chain:
+        - provider: ollama
+          model: ${OLLAMA_MODEL:-qwen2.5:0.5b}
+        - provider: ollama_secondary
+          model: ${OLLAMA_MODEL:-qwen2.5:0.5b}
+    # Пара для роутинга по сложности: маленькая и большая модель на одном сервере.
+    small-local:
+      chain:
+        - provider: ollama
+          model: ${OLLAMA_SMALL_MODEL:-qwen2.5:0.5b}
+    large-local:
+      chain:
+        - provider: ollama
+          model: ${OLLAMA_LARGE_MODEL:-qwen2.5:3b}
+    # Та же форма цепочки на моке — для сравнения «mock vs live».
+    mock-two-hop:
+      chain:
+        - provider: mock_primary
+          model: mock-gpt-4o-mini
+        - provider: mock_secondary
+          model: mock-claude-haiku
+
+# Роутинг по сложности. Клиент, отправивший model: "auto", получает маленькую или
+# большую модель по правилам из src/llm_gateway/complexity.py; решение и причины
+# приходят в ответе (заголовок X-Gateway-Route-Decision, поле gateway.routing) и в
+# метрике llm_gateway_routing_decisions_total. Выключен: включается оверлеем
+# config/extras/live_local.yaml. Все веса и списки слов ниже переопределяются здесь.
+routing:
+  complexity:
+    enabled: false
+    route_name: auto
+    small_route: small-local
+    large_route: large-local
+    large_threshold: 3
 
 # Цены в USD за 1M токенов. Значения для платных провайдеров — по состоянию на 2026-08,
 # сверяйте с прайс-листом провайдера перед продовым использованием.
@@ -242,6 +287,12 @@ pricing:
       input_per_mtok: 3.00
       output_per_mtok: 15.00
     "llama3.2":
+      input_per_mtok: 0.0
+      output_per_mtok: 0.0
+    "qwen2.5:0.5b":
+      input_per_mtok: 0.0
+      output_per_mtok: 0.0
+    "qwen2.5:3b":
       input_per_mtok: 0.0
       output_per_mtok: 0.0
     # Синтетические цены мока — чтобы стоимость в отчёте была не нулевой.

@@ -1,0 +1,39 @@
+{
+  "target": "mock",
+  "scenario": "steady",
+  "route": "mock-two-hop",
+  "backend": "mock provider",
+  "users": 4,
+  "max_tokens": 64,
+  "duration_s": 60.3,
+  "kill_at_s": null,
+  "started_at": "2026-10-01T14:17:41.905550+00:00",
+  "git_sha": "bc11a33",
+  "environment": {
+    "platform": "macOS-15.7.9-arm64-arm-64bit",
+    "cpu_count": 8,
+    "python": "3.12.14"
+  },
+  "notes": {},
+  "results": {
+    "requests": 2644,
+    "success_rate": 1.0,
+    "requests_per_s": 43.84,
+    "latency_ms": {
+      "p50": 89.9,
+      "p95": 127.9,
+      "p99": 132.7
+    },
+    "latency_ms_all_requests": {
+      "p50": 89.9,
+      "p95": 127.9,
+      "p99": 132.7
+    },
+    "status_counts": {
+      "200": 2644
+    },
+    "provider_share": {
+      "mock_primary": 1.0
+    }
+  }
+}

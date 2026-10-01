@@ -61,9 +61,7 @@ def upgrade() -> None:
     op.create_index("ix_llm_calls_error_kind", "llm_calls", ["error_kind"])
     op.create_index("ix_llm_calls_cache_hit", "llm_calls", ["cache_hit"])
     op.create_index("ix_llm_calls_request_id", "llm_calls", ["request_id"])
-    op.create_index(
-        "ix_llm_calls_created_at_provider", "llm_calls", ["created_at", "provider"]
-    )
+    op.create_index("ix_llm_calls_created_at_provider", "llm_calls", ["created_at", "provider"])
 
     op.create_table(
         "llm_attempts",

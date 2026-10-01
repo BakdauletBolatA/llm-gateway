@@ -29,6 +29,14 @@ class ChatCompletionRequest(BaseModel):
         """Flattened prompt used for token estimation."""
         return "\n".join(f"{m.role}: {m.content}" for m in self.messages)
 
+    def generation_params(self) -> dict[str, Any]:
+        """Parameters that change what the model writes, as opposed to who asked."""
+        return {
+            "max_tokens": self.max_tokens,
+            "temperature": self.temperature,
+            "stop": self.stop,
+        }
+
     def _last_user_index(self) -> int:
         for index in range(len(self.messages) - 1, -1, -1):
             if self.messages[index].role == "user":

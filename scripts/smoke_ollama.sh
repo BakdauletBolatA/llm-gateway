@@ -12,7 +12,7 @@ set -euo pipefail
 
 GATEWAY="${GATEWAY_URL:-http://127.0.0.1:8080}"
 OLLAMA="${OLLAMA_URL:-http://127.0.0.1:11434}"
-MODEL="${OLLAMA_MODEL:-llama3.2}"
+MODEL="${OLLAMA_MODEL:-qwen2.5:0.5b}"
 
 echo "1/4 Ollama отвечает?"
 if ! curl -fsS "$OLLAMA/api/tags" >/dev/null; then
