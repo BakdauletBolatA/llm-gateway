@@ -302,7 +302,12 @@ class ComplexityRouterConfig(ConfigModel):
     math_markers: list[str] = Field(
         default_factory=lambda: [
             r"\d\s*[-+*/^=×÷]\s*\d",
-            r"\b\d+(\.\d+)?\s*(km|kg|hours?|minutes?|miles|%|percent)\b",
+            # No trailing \b: "%" is not a word character, so "40%\b" never matches.
+            r"\d(\.\d+)?\s*%",
+            r"[$€£]\s*\d",
+            r"\b\d+(\.\d+)?\s*(km|kg|cm|mm|litres?|liters?|hours?|minutes?|miles|percent)\b",
+            # A quantity question only counts as arithmetic when there is a number to work with.
+            r"\d[\s\S]*\bhow (much|many|old)\b|\bhow (much|many|old)\b[\s\S]*\d",
             r"\b(calculate|solve|probability|equation|integral|derivative)\b",
         ]
     )

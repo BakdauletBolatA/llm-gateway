@@ -76,3 +76,33 @@ def test_the_threshold_is_configurable() -> None:
 def test_a_router_without_two_distinct_routes_is_refused() -> None:
     with pytest.raises(ValidationError, match="different"):
         ComplexityRouterConfig(enabled=True, small_route="same", large_route="same")
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "What is 15% of 240?",
+        "A tank is 40% full. How many litres are missing?",
+        "A shop sells pens at 3 for $2. How much do 24 pens cost?",
+        "Tom is twice as old as Anna and in 6 years they will be 42 in total. How old is Anna?",
+    ],
+)
+def test_arithmetic_word_problems_are_not_mistaken_for_simple_questions(prompt: str) -> None:
+    decision = classify(ask(prompt), CONFIG)
+    assert decision.tier == "large", decision
+    assert any(reason.startswith("math") for reason in decision.reasons)
+
+
+def test_a_percent_sign_is_matched_even_though_it_is_not_a_word_character() -> None:
+    assert classify(ask("What is 7% of 50?"), CONFIG).score >= 3
+
+
+def test_plain_questions_that_merely_contain_a_number_stay_small() -> None:
+    assert (
+        classify(ask("What is the capital of the country whose phone prefix is 33?"), CONFIG).tier
+        == "small"
+    )
+
+
+def test_a_quantity_question_without_a_number_is_not_arithmetic() -> None:
+    assert classify(ask("How many days are in a leap year?"), CONFIG).tier == "small"
