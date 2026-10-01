@@ -4,28 +4,62 @@
     "same": 61,
     "different": 60
   },
-  "max_false_hit_rate": 0.0,
-  "recommended_threshold": 0.86,
   "selected_on": "even-numbered pair ids",
   "scored_on": "odd-numbered pair ids",
-  "held_out_at_recommended": {
-    "threshold": 0.86,
-    "hit_rate": 0.0,
-    "false_hit_rate": 0.0,
-    "false_hits": 0,
-    "false_hit_rate_upper_95": 0.11351709139047801
+  "recommendations": [
+    {
+      "max_false_hit_rate": 0.0,
+      "threshold": 0.86,
+      "held_out": {
+        "threshold": 0.86,
+        "hit_rate": 0.0,
+        "false_hit_rate": 0.0,
+        "false_hits": 0,
+        "false_hit_rate_upper_95": 0.11351709139047801
+      }
+    },
+    {
+      "max_false_hit_rate": 0.02,
+      "threshold": 0.86,
+      "held_out": {
+        "threshold": 0.86,
+        "hit_rate": 0.0,
+        "false_hit_rate": 0.0,
+        "false_hits": 0,
+        "false_hit_rate_upper_95": 0.11351709139047801
+      }
+    },
+    {
+      "max_false_hit_rate": 0.05,
+      "threshold": 0.86,
+      "held_out": {
+        "threshold": 0.86,
+        "hit_rate": 0.0,
+        "false_hit_rate": 0.0,
+        "false_hits": 0,
+        "false_hit_rate_upper_95": 0.11351709139047801
+      }
+    },
+    {
+      "max_false_hit_rate": 0.1,
+      "threshold": 0.82,
+      "held_out": {
+        "threshold": 0.82,
+        "hit_rate": 0.0,
+        "false_hit_rate": 0.13333333333333333,
+        "false_hits": 4,
+        "false_hit_rate_upper_95": 0.2968168394441695
+      }
+    }
+  ],
+  "highest_similarity_of_a_different_pair": {
+    "different_quantity_or_parameter": 0.8552,
+    "entity_swap": 0.8361,
+    "negation_or_opposite": 0.8569,
+    "same_topic_different_intent": 0.7425,
+    "shared_words_unrelated": 0.7635
   },
-  "all_pairs_at_recommended": {
-    "threshold": 0.86,
-    "hit_rate": 0.0,
-    "false_hit_rate": 0.0,
-    "false_hits": 0,
-    "false_hit_rate_upper_95": 0.060173930477932895
-  },
-  "score_range": {
-    "same_min": -0.040520714215974835,
-    "different_max": 0.8568663695425174
-  },
+  "lowest_similarity_of_a_paraphrase": -0.0405,
   "curve_all_pairs": [
     {
       "threshold": 0.5,
@@ -729,6 +763,5 @@
       "false_hits": 0,
       "false_hit_rate_upper_95": 0.11351709139047801
     }
-  ],
-  "false_hits_at_recommended": []
+  ]
 }
