@@ -26,3 +26,9 @@ reliability:
     enabled: true
     max_concurrent_per_provider: 4
     queue_timeout_ms: 20000
+
+# Виртуальная модель "auto": маленькая модель для простых запросов, большая для
+# сложных (eval/routing_eval.py).
+routing:
+  complexity:
+    enabled: true

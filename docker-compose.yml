@@ -56,6 +56,8 @@ services:
       OLLAMA_BASE_URL: http://ollama:11434
       OLLAMA_SECONDARY_BASE_URL: http://ollama-secondary:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:0.5b}
+      OLLAMA_SMALL_MODEL: ${OLLAMA_SMALL_MODEL:-qwen2.5:0.5b}
+      OLLAMA_LARGE_MODEL: ${OLLAMA_LARGE_MODEL:-qwen2.5:3b}
       GATEWAY_CONFIG: ${GATEWAY_CONFIG:-config/gateway.yaml}
       GATEWAY_CONFIG_OVERLAY: ${GATEWAY_CONFIG_OVERLAY:-}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}

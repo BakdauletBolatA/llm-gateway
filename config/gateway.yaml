@@ -236,6 +236,15 @@ routes:
           model: ${OLLAMA_MODEL:-qwen2.5:0.5b}
         - provider: ollama_secondary
           model: ${OLLAMA_MODEL:-qwen2.5:0.5b}
+    # Пара для роутинга по сложности: маленькая и большая модель на одном сервере.
+    small-local:
+      chain:
+        - provider: ollama
+          model: ${OLLAMA_SMALL_MODEL:-qwen2.5:0.5b}
+    large-local:
+      chain:
+        - provider: ollama
+          model: ${OLLAMA_LARGE_MODEL:-qwen2.5:3b}
     # Та же форма цепочки на моке — для сравнения «mock vs live».
     mock-two-hop:
       chain:
@@ -243,6 +252,19 @@ routes:
           model: mock-gpt-4o-mini
         - provider: mock_secondary
           model: mock-claude-haiku
+
+# Роутинг по сложности. Клиент, отправивший model: "auto", получает маленькую или
+# большую модель по правилам из src/llm_gateway/complexity.py; решение и причины
+# приходят в ответе (заголовок X-Gateway-Route-Decision, поле gateway.routing) и в
+# метрике llm_gateway_routing_decisions_total. Выключен: включается оверлеем
+# config/extras/live_local.yaml. Все веса и списки слов ниже переопределяются здесь.
+routing:
+  complexity:
+    enabled: false
+    route_name: auto
+    small_route: small-local
+    large_route: large-local
+    large_threshold: 3
 
 # Цены в USD за 1M токенов. Значения для платных провайдеров — по состоянию на 2026-08,
 # сверяйте с прайс-листом провайдера перед продовым использованием.
@@ -268,6 +290,9 @@ pricing:
       input_per_mtok: 0.0
       output_per_mtok: 0.0
     "qwen2.5:0.5b":
+      input_per_mtok: 0.0
+      output_per_mtok: 0.0
+    "qwen2.5:3b":
       input_per_mtok: 0.0
       output_per_mtok: 0.0
     # Синтетические цены мока — чтобы стоимость в отчёте была не нулевой.
