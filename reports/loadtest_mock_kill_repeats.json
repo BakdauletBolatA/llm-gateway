@@ -1,0 +1,356 @@
+{
+  "target": "mock",
+  "scenario": "kill",
+  "route": "mock-two-hop",
+  "backend": "mock provider",
+  "users": 4,
+  "max_tokens": 64,
+  "repeats": 5,
+  "pause_s": 20,
+  "git_sha": "c6f439c",
+  "environment": {
+    "platform": "macOS-15.7.9-arm64-arm-64bit",
+    "cpu_count": 8,
+    "python": "3.12.14"
+  },
+  "aggregate": {
+    "runs": 5,
+    "requests_per_s": {
+      "min": 42.05,
+      "median": 42.33,
+      "max": 42.52
+    },
+    "success_rate": {
+      "min": 1.0,
+      "median": 1.0,
+      "max": 1.0
+    },
+    "latency_ms": {
+      "p50": {
+        "min": 89.0,
+        "median": 89.4,
+        "max": 90.2
+      },
+      "p95": {
+        "min": 129.8,
+        "median": 130.3,
+        "max": 134.1
+      },
+      "p99": {
+        "min": 229.9,
+        "median": 232.9,
+        "max": 240.4
+      }
+    },
+    "failover": {
+      "failed_requests_after_kill": {
+        "min": 0,
+        "median": 0,
+        "max": 0
+      },
+      "seconds_to_first_success_from_other_provider": {
+        "min": 0.0,
+        "median": 0.0,
+        "max": 0.1
+      },
+      "runs_without_a_second_provider": 0
+    }
+  },
+  "runs": [
+    {
+      "started_at": "2026-10-01T20:58:51.769106+00:00",
+      "duration_s": 60.2,
+      "host_load_average_1m_before": 2.07,
+      "results": {
+        "requests": 2533,
+        "success_rate": 1.0,
+        "requests_per_s": 42.05,
+        "latency_ms": {
+          "p50": 90.2,
+          "p95": 134.1,
+          "p99": 240.4
+        },
+        "latency_ms_all_requests": {
+          "p50": 90.2,
+          "p95": 134.1,
+          "p99": 240.4
+        },
+        "status_counts": {
+          "200": 2533
+        },
+        "provider_share": {
+          "mock_primary": 0.5199,
+          "mock_secondary": 0.4801
+        },
+        "before_kill": {
+          "requests": 1324,
+          "success_rate": 1.0,
+          "requests_per_s": 44.13,
+          "latency_ms": {
+            "p50": 90.0,
+            "p95": 128.0,
+            "p99": 137.9
+          },
+          "provider_share": {
+            "mock_primary": 0.9947,
+            "mock_secondary": 0.0053
+          }
+        },
+        "after_kill": {
+          "requests": 1209,
+          "success_rate": 1.0,
+          "requests_per_s": 39.98,
+          "latency_ms": {
+            "p50": 90.7,
+            "p95": 193.4,
+            "p99": 260.9
+          },
+          "provider_share": {
+            "mock_secondary": 1.0
+          }
+        },
+        "failover": {
+          "provider_killed": "mock_primary",
+          "failed_requests_after_kill": 0,
+          "seconds_to_first_success_from_other_provider": 0.0
+        }
+      }
+    },
+    {
+      "started_at": "2026-10-01T21:00:12.079712+00:00",
+      "duration_s": 60.3,
+      "host_load_average_1m_before": 2.89,
+      "results": {
+        "requests": 2550,
+        "success_rate": 1.0,
+        "requests_per_s": 42.32,
+        "latency_ms": {
+          "p50": 89.4,
+          "p95": 130.3,
+          "p99": 235.9
+        },
+        "latency_ms_all_requests": {
+          "p50": 89.4,
+          "p95": 130.3,
+          "p99": 235.9
+        },
+        "status_counts": {
+          "200": 2550
+        },
+        "provider_share": {
+          "mock_primary": 0.5235,
+          "mock_secondary": 0.4765
+        },
+        "before_kill": {
+          "requests": 1343,
+          "success_rate": 1.0,
+          "requests_per_s": 44.77,
+          "latency_ms": {
+            "p50": 88.6,
+            "p95": 126.7,
+            "p99": 132.1
+          },
+          "provider_share": {
+            "mock_primary": 0.994,
+            "mock_secondary": 0.006
+          }
+        },
+        "after_kill": {
+          "requests": 1207,
+          "success_rate": 1.0,
+          "requests_per_s": 39.9,
+          "latency_ms": {
+            "p50": 91.2,
+            "p95": 196.0,
+            "p99": 262.0
+          },
+          "provider_share": {
+            "mock_secondary": 1.0
+          }
+        },
+        "failover": {
+          "provider_killed": "mock_primary",
+          "failed_requests_after_kill": 0,
+          "seconds_to_first_success_from_other_provider": 0.1
+        }
+      }
+    },
+    {
+      "started_at": "2026-10-01T21:01:32.382202+00:00",
+      "duration_s": 60.3,
+      "host_load_average_1m_before": 2.45,
+      "results": {
+        "requests": 2562,
+        "success_rate": 1.0,
+        "requests_per_s": 42.52,
+        "latency_ms": {
+          "p50": 89.0,
+          "p95": 130.2,
+          "p99": 229.9
+        },
+        "latency_ms_all_requests": {
+          "p50": 89.0,
+          "p95": 130.2,
+          "p99": 229.9
+        },
+        "status_counts": {
+          "200": 2562
+        },
+        "provider_share": {
+          "mock_primary": 0.5211,
+          "mock_secondary": 0.4789
+        },
+        "before_kill": {
+          "requests": 1343,
+          "success_rate": 1.0,
+          "requests_per_s": 44.77,
+          "latency_ms": {
+            "p50": 88.3,
+            "p95": 126.3,
+            "p99": 133.1
+          },
+          "provider_share": {
+            "mock_primary": 0.994,
+            "mock_secondary": 0.006
+          }
+        },
+        "after_kill": {
+          "requests": 1219,
+          "success_rate": 1.0,
+          "requests_per_s": 40.3,
+          "latency_ms": {
+            "p50": 90.7,
+            "p95": 189.1,
+            "p99": 247.2
+          },
+          "provider_share": {
+            "mock_secondary": 1.0
+          }
+        },
+        "failover": {
+          "provider_killed": "mock_primary",
+          "failed_requests_after_kill": 0,
+          "seconds_to_first_success_from_other_provider": 0.0
+        }
+      }
+    },
+    {
+      "started_at": "2026-10-01T21:02:52.702848+00:00",
+      "duration_s": 60.3,
+      "host_load_average_1m_before": 1.86,
+      "results": {
+        "requests": 2552,
+        "success_rate": 1.0,
+        "requests_per_s": 42.33,
+        "latency_ms": {
+          "p50": 89.6,
+          "p95": 131.7,
+          "p99": 231.5
+        },
+        "latency_ms_all_requests": {
+          "p50": 89.6,
+          "p95": 131.7,
+          "p99": 231.5
+        },
+        "status_counts": {
+          "200": 2552
+        },
+        "provider_share": {
+          "mock_primary": 0.5219,
+          "mock_secondary": 0.4781
+        },
+        "before_kill": {
+          "requests": 1340,
+          "success_rate": 1.0,
+          "requests_per_s": 44.67,
+          "latency_ms": {
+            "p50": 88.8,
+            "p95": 126.6,
+            "p99": 133.8
+          },
+          "provider_share": {
+            "mock_primary": 0.994,
+            "mock_secondary": 0.006
+          }
+        },
+        "after_kill": {
+          "requests": 1212,
+          "success_rate": 1.0,
+          "requests_per_s": 40.01,
+          "latency_ms": {
+            "p50": 91.0,
+            "p95": 191.2,
+            "p99": 249.7
+          },
+          "provider_share": {
+            "mock_secondary": 1.0
+          }
+        },
+        "failover": {
+          "provider_killed": "mock_primary",
+          "failed_requests_after_kill": 0,
+          "seconds_to_first_success_from_other_provider": 0.0
+        }
+      }
+    },
+    {
+      "started_at": "2026-10-01T21:04:13.062371+00:00",
+      "duration_s": 60.3,
+      "host_load_average_1m_before": 1.75,
+      "results": {
+        "requests": 2554,
+        "success_rate": 1.0,
+        "requests_per_s": 42.38,
+        "latency_ms": {
+          "p50": 89.4,
+          "p95": 129.8,
+          "p99": 232.9
+        },
+        "latency_ms_all_requests": {
+          "p50": 89.4,
+          "p95": 129.8,
+          "p99": 232.9
+        },
+        "status_counts": {
+          "200": 2554
+        },
+        "provider_share": {
+          "mock_primary": 0.5223,
+          "mock_secondary": 0.4777
+        },
+        "before_kill": {
+          "requests": 1341,
+          "success_rate": 1.0,
+          "requests_per_s": 44.7,
+          "latency_ms": {
+            "p50": 88.8,
+            "p95": 126.4,
+            "p99": 131.6
+          },
+          "provider_share": {
+            "mock_primary": 0.9948,
+            "mock_secondary": 0.0052
+          }
+        },
+        "after_kill": {
+          "requests": 1213,
+          "success_rate": 1.0,
+          "requests_per_s": 40.09,
+          "latency_ms": {
+            "p50": 90.7,
+            "p95": 188.7,
+            "p99": 256.2
+          },
+          "provider_share": {
+            "mock_secondary": 1.0
+          }
+        },
+        "failover": {
+          "provider_killed": "mock_primary",
+          "failed_requests_after_kill": 0,
+          "seconds_to_first_success_from_other_provider": 0.0
+        }
+      }
+    }
+  ]
+}
