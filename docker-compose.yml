@@ -103,6 +103,34 @@ services:
       mock:
         condition: service_healthy
 
+  # --- профиль observability: Prometheus и Grafana с готовым дашбордом ---
+  #   docker compose --profile observability up -d
+  # Grafana: http://127.0.0.1:3000 (просмотр без входа; admin/admin для правок).
+  # Слушает только localhost: пароль по умолчанию нельзя выставлять в сеть.
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    profiles: ["observability"]
+    volumes:
+      - ./ops/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
+
+  grafana:
+    image: grafana/grafana:12.1.0
+    profiles: ["observability"]
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/llm-gateway.json
+    volumes:
+      - ./ops/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./ops/grafana-dashboard.json:/var/lib/grafana/dashboards/llm-gateway.json:ro
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT:-3000}:3000"
+    depends_on:
+      - prometheus
+
   # --- профиль ollama: локальная модель без единого платного ключа ---
   ollama:
     image: ollama/ollama:latest

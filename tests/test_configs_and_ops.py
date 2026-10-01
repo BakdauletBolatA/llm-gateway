@@ -163,3 +163,65 @@ def test_the_live_overlay_does_not_race_two_requests_on_a_cpu_bound_backend() ->
     settings = load_settings(CONFIG, overlay_path=Path("config/extras/live_local.yaml"))
     assert settings.reliability.hedging.enabled is False
     assert settings.reliability.timeouts.total_s >= 30
+
+
+def _compose() -> dict:
+    import yaml
+
+    return yaml.safe_load(Path("docker-compose.yml").read_text())
+
+
+def test_the_observability_profile_adds_prometheus_and_grafana() -> None:
+    services = _compose()["services"]
+    for name in ("prometheus", "grafana"):
+        assert services[name]["profiles"] == ["observability"], name
+    # Nothing outside the profile may depend on them.
+    for name, service in services.items():
+        if service.get("profiles") == ["observability"]:
+            continue
+        depends = service.get("depends_on", {})
+        assert "prometheus" not in depends and "grafana" not in depends, name
+
+
+def test_prometheus_scrapes_the_gateway_where_compose_runs_it() -> None:
+    import yaml
+
+    config = yaml.safe_load(Path("ops/prometheus.yml").read_text())
+    targets = [
+        t for job in config["scrape_configs"] for sc in job["static_configs"] for t in sc["targets"]
+    ]
+    assert "gateway:8080" in targets
+    assert any(
+        job.get("metrics_path", "/metrics") == "/metrics" for job in config["scrape_configs"]
+    )
+
+
+def test_grafana_is_provisioned_with_the_datasource_and_the_dashboard() -> None:
+    import yaml
+
+    datasource = yaml.safe_load(
+        Path("ops/grafana/provisioning/datasources/prometheus.yml").read_text()
+    )["datasources"][0]
+    assert datasource["type"] == "prometheus"
+    assert datasource["url"] == "http://prometheus:9090"
+    assert datasource["isDefault"] is True
+
+    provider = yaml.safe_load(
+        Path("ops/grafana/provisioning/dashboards/dashboards.yml").read_text()
+    )["providers"][0]
+    mounts = _compose()["services"]["grafana"]["volumes"]
+    assert any(
+        "grafana-dashboard.json" in mount and provider["options"]["path"] in mount
+        for mount in mounts
+    )
+
+
+def test_grafana_listens_on_localhost_only() -> None:
+    ports = _compose()["services"]["grafana"]["ports"]
+    assert all(str(port).startswith("127.0.0.1:") for port in ports), ports
+
+
+def test_the_dashboard_shows_the_routing_split() -> None:
+    dashboard = json.loads(DASHBOARD.read_text())
+    expressions = [t["expr"] for p in dashboard["panels"] for t in p.get("targets", [])]
+    assert any("llm_gateway_routing_decisions_total" in e for e in expressions)
