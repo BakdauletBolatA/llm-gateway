@@ -31,7 +31,7 @@ def test_identical_text_is_maximally_similar() -> None:
 
 
 def test_punctuation_and_case_differences_stay_above_the_configured_threshold() -> None:
-    # config/gateway.yaml uses 0.60 (see scripts/calibrate_cache_threshold.py).
+    # The benchmark scripts run the lexical matcher at 0.60 (scripts/calibrate_cache_threshold.py).
     assert similarity("What is the capital of France?", "whats the capital of france") > 0.60
 
 
