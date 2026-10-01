@@ -240,6 +240,80 @@ class RouteTarget(ConfigModel):
     model: str
 
 
+class ComplexityRouterConfig(ConfigModel):
+    """Rule-based choice between a small and a large route, by how hard the request looks.
+
+    A request that names `route_name` ("auto") is scored from the last user
+    message; the score is a sum of the points below, and a score at or above
+    `large_threshold` goes to the large route. The decision and the reasons that
+    produced it are returned with every response.
+    """
+
+    enabled: bool = False
+    route_name: str = "auto"
+    small_route: str = "small"
+    large_route: str = "large"
+    large_threshold: int = Field(default=3, ge=1)
+
+    medium_chars: int = Field(default=250, ge=1)
+    long_chars: int = Field(default=600, ge=1)
+    medium_points: int = 1
+    long_points: int = 2
+    code_points: int = 3
+    reasoning_points: int = 3
+    math_points: int = 3
+    multi_part_points: int = 1
+    turns_points: int = 1
+    long_conversation_turns: int = Field(default=5, ge=1)
+
+    code_markers: list[str] = Field(
+        default_factory=lambda: [
+            "```",
+            r"\bdef \w+\(",
+            r"\bclass \w+",
+            r"\bfunction\b",
+            r"\bpython\b",
+            r"\bjavascript\b",
+            r"\bsql\b",
+            r"\bregex\b",
+            r"\bscript\b",
+            r"\bcode\b",
+            r"\bcompile\b",
+            r"\bbug\b",
+            r"\balgorithm\b",
+        ]
+    )
+    reasoning_markers: list[str] = Field(
+        default_factory=lambda: [
+            r"step[- ]by[- ]step",
+            r"\bwhy\b",
+            r"\bexplain\b",
+            r"\bprove\b",
+            r"\bderive\b",
+            r"\banaly[sz]e\b",
+            r"\bcompare\b",
+            r"\btrade-?offs?\b",
+            r"\bpros and cons\b",
+            r"\bdesign\b",
+            r"\bevaluate\b",
+            r"\bjustify\b",
+        ]
+    )
+    math_markers: list[str] = Field(
+        default_factory=lambda: [
+            r"\d\s*[-+*/^=×÷]\s*\d",
+            r"\b\d+(\.\d+)?\s*(km|kg|hours?|minutes?|miles|%|percent)\b",
+            r"\b(calculate|solve|probability|equation|integral|derivative)\b",
+        ]
+    )
+
+    @model_validator(mode="after")
+    def _two_distinct_routes(self) -> ComplexityRouterConfig:
+        if self.enabled and self.small_route == self.large_route:
+            raise ValueError("routing.complexity needs two different routes, small and large")
+        return self
+
+
 class RouteConfig(ConfigModel):
     chain: list[RouteTarget] = Field(min_length=1)
 
@@ -329,6 +403,10 @@ class AppConfig(ConfigModel):
     slow_request_ms: int = 5000
 
 
+class ComplexityRoutingSection(ConfigModel):
+    complexity: ComplexityRouterConfig = Field(default_factory=ComplexityRouterConfig)
+
+
 class Settings(ConfigModel):
     app: AppConfig = Field(default_factory=AppConfig)
     database: DatabaseConfig
@@ -338,6 +416,7 @@ class Settings(ConfigModel):
     providers: dict[str, ProviderConfig]
     routes: RoutesConfig
     pricing: PricingConfig = Field(default_factory=PricingConfig)
+    routing: ComplexityRoutingSection = Field(default_factory=lambda: ComplexityRoutingSection())
 
     @model_validator(mode="after")
     def _routes_reference_known_providers(self) -> Settings:
@@ -347,6 +426,15 @@ class Settings(ConfigModel):
                     raise ValueError(
                         f"route {route_name!r} references unknown provider {hop.provider!r}"
                     )
+        router = self.routing.complexity
+        if router.enabled:
+            for name in (router.small_route, router.large_route):
+                if name not in self.routes.definitions:
+                    raise ValueError(f"routing.complexity references unknown route {name!r}")
+            if router.route_name in self.routes.definitions:
+                raise ValueError(
+                    f"routing.complexity.route_name={router.route_name!r} is also a real route"
+                )
         return self
 
     def resolve_chain(self, route_name: str) -> list[RouteTarget]:
