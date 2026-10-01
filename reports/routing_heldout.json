@@ -1,0 +1,80 @@
+{
+  "prompts": 30,
+  "requests_modeled": 100,
+  "policies": {
+    "always_small": {
+      "passed": 25,
+      "pass_rate": 0.8333,
+      "pass_rate_ci95": [
+        0.664,
+        0.927
+      ],
+      "modeled_cost_usd_per_100": 0.0022735,
+      "mean_output_tokens": 29.0,
+      "mean_latency_ms": 1293.8,
+      "share_to_small": 1.0
+    },
+    "always_large": {
+      "passed": 29,
+      "pass_rate": 0.9667,
+      "pass_rate_ci95": [
+        0.833,
+        0.994
+      ],
+      "modeled_cost_usd_per_100": 0.031924999999999995,
+      "mean_output_tokens": 23.0,
+      "mean_latency_ms": 4475.2,
+      "share_to_small": 0.0
+    },
+    "routed": {
+      "passed": 28,
+      "pass_rate": 0.9333,
+      "pass_rate_ci95": [
+        0.787,
+        0.982
+      ],
+      "modeled_cost_usd_per_100": 0.0215155,
+      "mean_output_tokens": 23.8,
+      "mean_latency_ms": 3226.2,
+      "share_to_small": 0.6333
+    }
+  },
+  "router_vs_labels": {
+    "accuracy": 0.8667,
+    "complex_sent_to_small": 4,
+    "simple_sent_to_large": 0
+  },
+  "paired_routed_vs_always_large": {
+    "routed_wrong_large_right": 1,
+    "routed_right_large_wrong": 0
+  },
+  "passed_by_label_and_model": {
+    "simple": {
+      "small": 15,
+      "large": 15,
+      "prompts": 15
+    },
+    "complex": {
+      "small": 10,
+      "large": 14,
+      "prompts": 15
+    }
+  },
+  "reference_prices_usd_per_mtok": {
+    "small": {
+      "model": "gpt-4o-mini",
+      "input": 0.15,
+      "output": 0.6
+    },
+    "large": {
+      "model": "gpt-4o",
+      "input": 2.5,
+      "output": 10.0
+    }
+  },
+  "local_models": {
+    "small": "qwen2.5:0.5b",
+    "large": "qwen2.5:3b"
+  },
+  "note": "Held-out: 30 prompts and criteria committed (49ab48b) before this run; router rules frozen at a13b860, not modified afterwards."
+}
