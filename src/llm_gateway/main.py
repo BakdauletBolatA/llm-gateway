@@ -7,7 +7,7 @@ import math
 import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 
@@ -25,6 +25,7 @@ from llm_gateway.cache.embedder import (
     SentenceTransformerEmbedder,
 )
 from llm_gateway.cache.store import SemanticCache
+from llm_gateway.complexity import Decision, classify
 from llm_gateway.db import migrate
 from llm_gateway.db.models import EMBEDDING_COLUMN_DIM
 from llm_gateway.db.recorder import CallRecord, CallRecorder
@@ -193,6 +194,8 @@ def _gateway_headers(
     result: ExecutionResult | None = None,
     error: GatewayError | None = None,
     latency_ms: int = 0,
+    route: str | None = None,
+    routing: Decision | None = None,
 ) -> dict[str, str]:
     """Per-request telemetry in headers.
 
@@ -203,6 +206,10 @@ def _gateway_headers(
         "X-Gateway-Request-Id": request_id,
         "X-Gateway-Latency-Ms": str(latency_ms),
     }
+    if route is not None:
+        headers["X-Gateway-Route"] = route
+    if routing is not None:
+        headers["X-Gateway-Route-Decision"] = routing.header()
     if result is not None:
         headers.update(
             {
@@ -297,6 +304,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             headers["Retry-After"] = str(max(1, math.ceil(retry_after_s)))
             return JSONResponse(status_code=429, content=body.model_dump(), headers=headers)
 
+        routing: Decision | None = None
+        router_config = state.settings.routing.complexity
+        if router_config.enabled and route_name == router_config.route_name:
+            routing = classify(payload, router_config)
+            route_name = routing.route
+            observability.ROUTING_DECISIONS.labels(tier=routing.tier).inc()
+            logger.info(
+                "routed to %s: %s",
+                route_name,
+                routing.header(),
+                extra={"request_id": request_id, "route": route_name, "routing": routing.header()},
+            )
+
         if route_name not in state.settings.routes.definitions:
             known = ", ".join(sorted(state.settings.routes.definitions))
             body = ErrorResponse(
@@ -366,7 +386,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     details=_error_details(error),
                 )
             )
-            headers = _gateway_headers(request_id, error=error, latency_ms=latency_ms)
+            headers = _gateway_headers(
+                request_id, error=error, latency_ms=latency_ms, route=route_name, routing=routing
+            )
             if error.kind is ErrorKind.RATE_LIMITED:
                 headers["Retry-After"] = "1"
             return JSONResponse(
@@ -436,12 +458,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "cache_similarity": result.cache_similarity,
                 "cost_usd": result.cost_usd,
                 "latency_ms": latency_ms,
+                **({"routing": asdict(routing)} if routing is not None else {}),
             },
         )
         return JSONResponse(
             status_code=200,
             content=response.model_dump(),
-            headers=_gateway_headers(request_id, result=result, latency_ms=latency_ms),
+            headers=_gateway_headers(
+                request_id, result=result, latency_ms=latency_ms, route=route_name, routing=routing
+            ),
         )
 
     # -- usage and budget ---------------------------------------------------
