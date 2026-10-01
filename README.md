@@ -1,81 +1,117 @@
 # llm-gateway
 
-Шлюз поверх нескольких LLM-провайдеров (Anthropic, OpenAI, Ollama) с единым
-OpenAI-совместимым API, учётом расходов в PostgreSQL и лимитом бюджета.
+An OpenAI-compatible gateway in front of Anthropic, OpenAI and Ollama, with spend
+tracking in PostgreSQL, a hard budget, and the reliability mechanisms you need
+when a provider is slow, full, or down: timeouts, retries, circuit breaker,
+fallback, hedging, concurrency limits, rate limiting, a response cache, and a
+router that sends easy requests to a small model.
 
-**Главный артефакт проекта — не «оно работает», а [RELIABILITY.md](RELIABILITY.md):**
-отчёт с замерами поведения под отказами. Шлюз собирался итерациями — сначала
-стенд для поломок, затем намеренно наивная версия, затем по одному механизму
-надёжности за итерацию, и каждый шаг измерен на одинаковой нагрузке.
+**The point of the project is not that it works, but that every claim about it
+comes with a measurement you can re-run.** The gateway was built in iterations:
+a deliberately naive version first, then one reliability mechanism at a time, each
+measured on the same load. The results below are generated from files in
+[`reports/`](reports/) and [`bench/results/`](bench/results/) by scripts in this
+repository, and a test fails if the README drifts from them.
 
-| | наивный шлюз | финальная сборка |
+> The long-form report, [RELIABILITY.md](RELIABILITY.md), is written in Russian. Its
+> tables are generated from `bench/results` and checked by tests.
+
+## The problem
+
+An application that calls one LLM provider inherits that provider's bad days:
+latency tails, rate limits, outages, and a bill nobody capped. Putting a gateway
+in front fixes that only if the gateway's own mechanisms are right, and several of
+them make things worse when they are wrong: a circuit breaker without a fallback
+lowers availability; a cache that answers a *similar* question returns the wrong
+answer; a hedge doubles load on a provider that is already full. This repository
+builds those mechanisms and measures what each one is worth.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    client([Client]) -->|POST /v1/chat/completions| auth[Auth and rate limit]
+    auth --> auto{model = auto?}
+    auto -->|yes| complexity[Complexity router<br/>small or large route]
+    auto -->|no| cache
+    complexity --> cache{Cache<br/>opt-in, per tenant}
+    cache -->|hit| client
+    cache -->|miss| budget[Budget reservation]
+    budget -->|limit reached| refuse([402, no provider call])
+    budget --> chain
+
+    subgraph chain [Provider chain]
+        direction LR
+        breaker[Circuit breaker] --> bulkhead[Concurrency limit] --> retry[Retries with jitter]
+        retry -.->|hedge after a delay| next[Next provider]
+    end
+
+    chain --> openai[OpenAI dialect]
+    chain --> anthropic[Anthropic dialect]
+    chain --> ollama[Ollama dialect]
+
+    gateway[(PostgreSQL + pgvector<br/>calls, spend, cache)]
+    chain -.-> gateway
+    cache -.-> gateway
+    budget -.-> gateway
+    chain -->|/metrics| prom[Prometheus] --> grafana[Grafana]
+```
+
+Everything the gateway does to a request is in one file,
+[`src/llm_gateway/router.py`](src/llm_gateway/router.py). Each mechanism is switched
+by a flag in the config, so the naive baseline and the final build are the same code
+with different settings. That is what lets any row of the report be re-run without
+checking out an old commit.
+
+| mechanism | what it does | config |
 |---|---|---|
-| success rate на 11 сценариях | 46.4% | **90.9%** |
-| сценариев со 100% успеха | 2 из 11 | **10 из 11** |
-| p95 в «шторме» отказов | 20 002 мс | **250 мс** |
-| p95 на зависаниях провайдера | 20 003 мс | **520 мс** |
-| стоимость 1650 запросов | $0.0494 | $0.2123 |
+| timeouts | connect/read/write per call plus a deadline for the whole request | `reliability.timeouts` |
+| retries | exponential backoff with jitter, honours `Retry-After` | `reliability.retries` |
+| circuit breaker | per provider, sliding window, half-open probes | `reliability.circuit_breaker` |
+| fallback | an ordered chain of providers per route, across API dialects | `reliability.fallback` |
+| hedging | duplicate to the next provider when the current one is silent too long | `reliability.hedging` |
+| concurrency limit | at most N calls in flight per provider, queue bounded by the deadline | `reliability.bulkhead` |
+| rate limit | token bucket per API key, `429` before any work; shared across replicas through Postgres | `reliability.rate_limit` |
+| response cache | only when the client sends `"cache": true`; scoped to route, model, API key, generation parameters and conversation context; exact match by default, embedding match optional | `reliability.cache` |
+| budget | `402` before the provider is called; the amount is reserved up front, in Postgres when shared across replicas | `budget` |
+| complexity routing | `model: "auto"` goes to a small or a large route by transparent rules; the decision and its reasons come back with the response | `routing.complexity` |
 
-**Все числа в этой таблице и в отчёте измерены на мок-провайдере** из этого
-репозитория с 11 профилями отказов, а не на живом API: только так строки можно
-сравнивать между итерациями. Адаптеры к Anthropic, OpenAI и Ollama покрыты
-юнит-тестами на формат запроса, разбор ответа и классификацию ошибок, но прогона
-хаос-харнесса против платного или локального провайдера в отчёте нет — это
-следующая работа, а не сделанная. Цена этого допущения разобрана в разделе
-«Ограничения» отчёта.
+## Run it
 
-Шесть выводов, которые получились контринтуитивными и без замера были бы не видны:
-
-- **circuit breaker сам по себе снижает доступность** — с 70.7% до 29.9% на всех 11 сценариях. Он не
-  повышает доступность, а ограничивает ущерб, и выгоден только вместе с fallback.
-- **провайдер, который полон, для брейкера неотличим от сломанного.** На
-  провайдере с квотой конкурентности весь стек надёжности работал против нас:
-  наивная итерация с одними ретраями давала 62.7%, сборка с брейкером — 1.3%.
-  Лечится одним условием: ответ с `Retry-After` — это backpressure, а не отказ, и
-  в окно брейкера он не попадает (43% → 100%, и на 24% дешевле на `rate_limited`).
-- **два механизма надёжности могут гасить друг друга.** Хедж и лимит
-  конкурентности по отдельности полезны, вместе на квотированном провайдере дают
-  хуже: отменённый дубль освобождает слот у нас, но не у провайдера. Выключение
-  хеджа поднимает тот же сценарий с 66.7% до 100%.
-- **хеджирование платит не за дубли, а за прайс-лист.** Отменённые дубли стоят
-  ноль; дорого выходит то, что ответ теперь приходит от следующего звена цепочки —
-  на профиле `slow` это ×8.6 за запрос при p95 в 4.6 раза лучше.
-- **полезность механизма определяется не механизмом, а тем, какие отказы вы
-  удосужились измерить.** Ретраи были мёртвым кодом восемь итераций подряд — пока
-  не появился сценарий с квотой, где без них доступность падает со 100% до 47.3%.
-- **короткий бенчмарк измеряет разогрев, а не steady state**: p95 семантического
-  кэша на 150 запросах — 636 мс, на 600 запросах — 279 мс.
-
-Подробности, полные таблицы и разбор каждой итерации — в
-[RELIABILITY.md](RELIABILITY.md).
-
----
-
-## Быстрый старт
-
-Работает **без единого платного ключа**: маршрут по умолчанию ходит в мок-провайдер.
+From a clean checkout, with Docker only. No API key is needed: the default route
+talks to the bundled mock provider.
 
 ```bash
 docker compose up -d --build
 
 curl -s localhost:8080/v1/chat/completions \
   -H 'content-type: application/json' \
-  -d '{"model":"chaos-default","messages":[{"role":"user","content":"Привет"}]}' | jq
+  -d '{"model":"chaos-default","messages":[{"role":"user","content":"Hello"}]}' | jq
 
 curl -s 'localhost:8080/v1/usage?group_by=provider' | jq
 ```
 
-С локальной моделью вместо мока (образ и модель весят гигабайты, поэтому за
-профилем):
+**With a real local model** (the images and weights are a few gigabytes, so it is a
+profile). `qwen2.5:0.5b` is pulled automatically and runs on a CPU:
 
 ```bash
-docker compose --profile ollama up -d --build
-OLLAMA_ENABLED=true docker compose up -d gateway
-scripts/smoke_ollama.sh          # проверка, что живой провайдер отвечает
+OLLAMA_ENABLED=true GATEWAY_CONFIG_OVERLAY=config/extras/live_local.yaml \
+  docker compose --profile ollama up -d --build
+
+curl -si localhost:8080/v1/chat/completions -H 'content-type: application/json' \
+  -d '{"model":"auto","messages":[{"role":"user","content":"What is the capital of Australia?"}]}' \
+  | grep -i '^x-gateway-\(route\|model\)'
 ```
 
-Две реплики на одном Postgres — чтобы увидеть разницу между `local` и `shared`
-своими глазами, а не только в отчёте:
+**With Prometheus and Grafana** (dashboard provisioned, no login for viewing,
+bound to localhost):
+
+```bash
+docker compose --profile observability up -d     # Grafana on http://127.0.0.1:3000
+```
+
+**Two replicas on one Postgres**, to see the difference between a per-process and a
+shared limit:
 
 ```bash
 RATE_LIMIT_SCOPE=shared BUDGET_SCOPE=shared docker compose --profile replica up -d --build
@@ -83,14 +119,10 @@ python scripts/shared_limit_probe.py \
   --gateway http://127.0.0.1:8080 --gateway http://127.0.0.1:8082
 ```
 
-Со `scope: local` те же две реплики выдают два лимита: и по частоте (103 запроса
-против 63), и по деньгам (перерасход +107.9% против +5.6%).
+**Paid providers**: copy `.env.example` to `.env`, set the keys and
+`OPENAI_ENABLED=true` / `ANTHROPIC_ENABLED=true`, and use the `production` route.
 
-С платными провайдерами — скопируйте `.env.example` в `.env`, положите ключи,
-поставьте `OPENAI_ENABLED=true` / `ANTHROPIC_ENABLED=true` и используйте маршрут
-`production`.
-
-Без Docker (нужен внешний PostgreSQL с расширением `pgvector`):
+**Without Docker** (needs an external PostgreSQL with `pgvector`):
 
 ```bash
 make install
@@ -98,235 +130,303 @@ DATABASE_URL=postgresql+asyncpg://gateway:gateway@127.0.0.1:5432/llm_gateway \
 MOCK_BASE_URL=http://127.0.0.1:8081 make native-up
 ```
 
----
+## Results
 
-## Как это устроено
+Every number below is produced by a script in this repository. To reproduce them:
 
-```
-                    ┌─────────────────────────────────────────────┐
-POST /v1/chat/      │  rate limit → кэш → бюджет → по цепочке:    │
-completions ───────>│    брейкер → лимит слотов → ретраи → вызов, │
-                    │    со второго звена параллельно (хедж)      │
-                    └───────────────┬─────────────────────────────┘
-                                    │
-              ┌─────────────────────┼──────────────────────┐
-              ▼                     ▼                      ▼
-        OpenAI-диалект       Anthropic-диалект       Ollama-диалект
-     /v1/chat/completions      /v1/messages            /api/chat
-              │                     │                      │
-              └─────────────────────┴──────────────────────┘
-                                    │
-                            PostgreSQL + pgvector
-                    (лог вызовов и попыток, расходы, кэш)
+```bash
+pip install -e ".[dev,embeddings,loadtest]"
+python eval.py --start-stack          # cache + routing (replayed) + load test on the mock
+python eval.py --live                 # additionally re-measure on live local models (slow)
+python eval.py --check                # verify this table matches reports/
 ```
 
-Всё, что делает шлюз с запросом, собрано в одном месте — `src/llm_gateway/router.py`.
-Каждый механизм включается флагом в конфиге, поэтому наивная базовая версия и
-финальная сборка — это один и тот же код с разными настройками. Именно это
-позволяет перепрогнать любую строку отчёта, не откатываясь на старый коммит.
+`eval.py` runs [`eval/cache_eval.py`](eval/cache_eval.py),
+[`eval/routing_eval.py`](eval/routing_eval.py) and
+[`loadtest/run.py`](loadtest/run.py), writes machine-readable files to
+[`reports/`](reports/), and rebuilds the block below with
+[`eval/readme_table.py`](eval/readme_table.py). The chaos benchmark has its own
+script, [`scripts/reproduce_report.sh`](scripts/reproduce_report.sh) (about 20
+minutes).
 
-| механизм | что делает | конфиг |
+<!-- results:start -->
+
+**Reliability under injected failures** — mock provider, 11 failure profiles ([`chaos/run.py`](src/chaos/run.py), full report in [RELIABILITY.md](RELIABILITY.md)):
+
+| build (mock provider) | success, all scenarios | scenarios at 100% | p95, `storm` | p95, `hang` | cost, all requests |
+|---|---|---|---|---|---|
+| naive gateway | 46.4% | 2 of 11 | 20,002 ms | 20,003 ms | $0.0494 |
+| final build | 90.9% | 10 of 11 | 250 ms | 520 ms | $0.2123 |
+
+**Semantic cache** — 121 labelled query pairs, hand-written ([`eval/cache_eval.py`](eval/cache_eval.py)). The threshold is chosen on half the pairs and scored on the other half:
+
+| embedder | highest similarity of a *different* pair | threshold at 5% false hits | held-out hit rate | held-out false hits |
+|---|---|---|---|---|
+| hash n-gram vectors (the old matcher) | 0.857 | 0.86 | 0.0% | 0 of 30 |
+| all-MiniLM-L6-v2 (local, CPU) | 0.995 | 0.93 | 12.9% | 1 of 30 |
+
+**Load test** — closed loop, `max_tokens` 64 ([`loadtest/run.py`](loadtest/run.py)). *kill* stops the primary backend halfway:
+
+| backend | scenario | users | requests | req/s | p50 | p95 | p99 | success | failover |
+|---|---|---|---|---|---|---|---|---|---|
+| mock provider | steady | 4 | 2644 | 43.84 | 90 ms | 128 ms | 133 ms | 100.0% |  |
+| mock provider | kill | 4 | 2509 | 41.63 | 91 ms | 132 ms | 240 ms | 100.0% | 0 failed after the kill; first answer from the other server after 0.0 s |
+| live qwen2.5:0.5b, CPU | steady | 4 | 94 | 1.04 | 3,874 ms | 4,486 ms | 5,082 ms | 100.0% |  |
+| live qwen2.5:0.5b, CPU | kill | 4 | 89 | 0.98 | 4,047 ms | 5,868 ms | 7,113 ms | 100.0% | 0 failed after the kill; first answer from the other server after 1.1 s |
+
+**Routing by complexity** — correctness is a programmatic check, cost is modeled from measured tokens at gpt-4o-mini / gpt-4o prices ([`eval/routing_eval.py`](eval/routing_eval.py)):
+
+| set (live qwen2.5:0.5b and 3b) | correct, always large | correct, always small | correct, routed | modeled $/100, always large | modeled $/100, routed | sent to small | router vs hand labels |
+|---|---|---|---|---|---|---|---|
+| 50 prompts, rules as first run | 49/50 | 41/50 | 43/50 | $0.0336 | $0.0188 | 62.0% | 88.0% |
+| 50 prompts, rules tuned on this set | 49/50 | 41/50 | 47/50 | $0.0336 | $0.0249 | 52.0% | 98.0% |
+| 30 held-out prompts, rules frozen | 29/30 | 25/30 | 28/30 | $0.0319 | $0.0215 | 63.3% | 86.7% |
+
+<!-- results:end -->
+
+### What was measured on the mock, and what on a live model
+
+| measurement | backend | what that means |
 |---|---|---|
-| таймауты | connect/read/write на вызов + общий дедлайн запроса | `reliability.timeouts` |
-| ретраи | экспоненциальный бэкофф с джиттером, уважение `Retry-After` | `reliability.retries` |
-| circuit breaker | на провайдера, скользящее окно, half-open пробники | `reliability.circuit_breaker` |
-| fallback | цепочка провайдеров маршрута, в том числе через разные диалекты | `reliability.fallback` |
-| хеджирование | дубль на следующее звено, если текущее молчит дольше задержки | `reliability.hedging` |
-| лимит конкурентности | не больше N вызовов в полёте к одному провайдеру, очередь с дедлайном | `reliability.bulkhead` |
-| rate limit | токен-бакет на API-ключ, отказ `429` до любой работы; общий на реплики через Postgres | `reliability.rate_limit` |
-| кэш ответов | по явному `"cache": true`, в scope «маршрут + модель + API-ключ + хеш контекста»; по умолчанию точное совпадение вопроса, семантический режим — на настоящих эмбеддингах; фоновая уборка протухшего | `reliability.cache` |
-| бюджет | отказ `402` до вызова провайдера, а не счёт потом; резервация суммы в Postgres — общая на реплики | `budget` |
+| chaos benchmark: 11 failure profiles, 9 iterations, ablations, multi-replica probes | **mock provider** | failure behaviour is injected and deterministic, so rows are comparable between iterations. A live model gives hardware-dependent latency, which would make them incomparable. |
+| load test, mock rows | **mock provider** | the same two scenarios and the same reliability overlay as the live rows, so the difference between the two is the backend |
+| load test, live rows | **live `qwen2.5:0.5b`** on Ollama, CPU only, Docker on an 8-core laptop | one run per row, about 90 requests each: the p99 is close to the maximum |
+| routing eval | **live `qwen2.5:0.5b` and `qwen2.5:3b`** | answers were recorded once, then every policy is replayed over the same answers |
+| cache eval | **local `all-MiniLM-L6-v2`** (and the hash n-gram embedder for comparison) | no provider involved |
+| adapters for Anthropic and OpenAI | **neither**; unit-tested against `httpx.MockTransport` | request format, response parsing and error classification are tested; the chaos harness has never been run against a paid API |
 
-### Как настроить это под своего провайдера
+Limits that apply to the tables above:
 
-Числа в конфиге по умолчанию подобраны под мок-провайдера этого репозитория.
-Замеры дают правила, по которым их нужно пересчитать под ваш случай:
+- The load test uses 4 virtual users: a CPU-bound 0.5B model is already saturated
+  there. There are no runs at higher concurrency, and no repeated runs to estimate
+  run-to-run spread.
+- The live model is warmed on both Ollama servers before timing starts, so a cold
+  start on the failover target is not in the numbers.
+- Routing cost is **modeled**, not billed: tokens are measured on the local models
+  and priced at gpt-4o-mini and gpt-4o list prices from `config/gateway.yaml`.
+  Running locally costs nothing, and the two tokenizers differ, so read it as an
+  order of magnitude.
+- Routing correctness is a programmatic check (the answer contains the right fact,
+  number or code construct). It is not a quality score, and generated code is
+  never executed. The simple/complex labels are the author's judgement; edit
+  `eval/data/routing_prompts.jsonl` to apply yours.
+- The cache and routing datasets are small and written by hand, so confidence
+  intervals are wide. No LLM judge is used, so there is no judge-versus-human
+  agreement to report.
 
-| если у провайдера… | что поставить | откуда число |
+## What failed, and what I learned
+
+**The cache served answers to different questions, and to different people.** The
+first cache matched on hash n-gram vectors at a similarity threshold of 0.60. That
+threshold was calibrated on the benchmark workload (22 deliberately different
+topics), where nothing collides. On ordinary questions it does:
+`What is the capital of France?` / `What is the capital of Spain?` score 0.775 and
+`Is it safe to take ibuprofen with alcohol?` / `...without alcohol?` score 0.852, both
+above the threshold and above some real paraphrases. The cache was also on by
+default and keyed on route and model only, so one tenant's answer could be served to
+another, as could an answer written for a different system prompt. All of it is
+fixed (exact matching, opt-in, scoped per tenant, context and generation
+parameters), with a failing test for each, and the benchmark scripts now switch the
+old matcher on explicitly.
+
+**A real embedding model does not make a similarity threshold safe.** With
+`all-MiniLM-L6-v2`, `How do I convert Celsius to Fahrenheit?` and the reverse score
+0.995, and `enable dark mode` / `disable dark mode` score 0.927, higher than most
+genuine paraphrases. On the 121-pair set no threshold has zero false hits; at an
+accepted 5% false-hit rate the held-out hit rate is 12.9%. The default is therefore
+exact matching, the cache is off in the shipped config, and the semantic mode is
+documented as something you enable knowingly for low-stakes traffic.
+
+**The first version of the router lost answers.** On the first run, routing scored
+43 of 50 against 49 of 50 for always using the large model, and the 6 prompts it
+sent to the small model by mistake were arithmetic word problems. The cause was a
+real bug: the pattern `\d+\s*%\b` can never match, because `%` is not a word
+character. I fixed it, and then the rules scored 47 of 50 on the same prompts, which
+is optimistic because I tuned on the failures. That is why the table also has 30
+prompts written and committed before the router was run on them, with the rules
+frozen: 28 of 30 against 29 of 30 for the large model, at a third lower modeled
+cost. The weakness that remains is a short hard question with no keyword, such as
+`Is 91 a prime number?`: rules over surface features cannot see it.
+
+**`docker compose up` did not work from a clean machine.** The image installs the
+package into `site-packages`, but migrations were located relative to the source
+file, so the gateway crashed at startup in the container. Tests ran from the
+checkout and never noticed. Found while preparing the load test, fixed with a test.
+
+**Two of my own grading criteria were wrong.** After the first routing run, two
+checks rejected correct answers from the large model (a phrase list that was too
+narrow, and a `max()` mentioned in prose rather than in code). I corrected them and
+said so in the report: the corrected criteria move the large model from 47 to 49 of
+50.
+
+**Mechanisms interact.** The most useful results of the benchmark were the
+counterintuitive ones: a circuit breaker without a fallback lowers availability;
+a provider that is merely full looks broken to a breaker unless `Retry-After` is
+treated as backpressure; a hedge and a concurrency limit cancel each other on a
+provider with a quota; and a short benchmark measures warm-up, not steady state.
+Each is measured in [RELIABILITY.md](RELIABILITY.md).
+
+## What is deliberately not done
+
+- **No streaming.** Retries and fallback after the first token arrive are a separate
+  problem with a different error model.
+- **No "not a cent over".** The budget reserves an *estimate* up front and settles
+  to the actual cost, so what remains is requests in flight times the estimation
+  error. Measured: +4.9% on one replica, +5.6% on two with `BUDGET_SCOPE=shared`
+  (and +107.9% on two replicas with the per-process counter). Closing it needs a
+  conservative estimate, at the price of leaving budget unused (measured −44.2%).
+- **No safe semantic cache by default.** See above.
+
+## Configuring it for your provider
+
+The defaults are tuned for the bundled mock. The measurements give rules for
+re-deriving them:
+
+| if your provider… | set | evidence |
 |---|---|---|
-| обычная латентность p95 = X | `hedging.delay_ms` ≈ X | ниже X дублируется здоровый трафик и p95 растёт (замер: 50 мс → 40% дублей) |
-| есть квота конкурентности N | `providers.<имя>.max_concurrent: N` и **выключить хедж** для этого маршрута | отменённый дубль освобождает слот у вас, но не у провайдера |
-| цепочка от дешёвого к дорогому | помнить, что хедж переводит трафик на следующее звено | на `slow` это ×8.6 за ответ |
-| есть `Retry-After` | `circuit_breaker.retry_after_is_backpressure: true` | иначе занятый провайдер выглядит мёртвым |
-| известна ваша ёмкость | `rate_limit.requests_per_second` из неё | отказ за 16 мс лучше таймаута за 12 с |
-| больше одной реплики | `RATE_LIMIT_SCOPE=shared` | иначе каждая реплика выдаёт полный лимит: замер на двух — 103 запроса против 63 |
-| больше одной реплики | `BUDGET_SCOPE=shared` | иначе каждая реплика тратит свой лимит: замер на двух — перерасход +107.9% против +5.6% |
-| много реплик | `circuit_breaker.min_calls` × число реплик — это стуки в мёртвого провайдера на каждую аварию | брейкер остаётся по-репличным намеренно: цена второй реплики +7 вызовов и не растёт с трафиком |
-| ответы длиннее ожидаемого | `budget.estimate_output_tokens` с запасом | резервируется оценка, платится факт: недооценка = перерасход, переоценка = недоиспользование лимита (−44.2%) |
-| короткий `cache.ttl_s` при плотном трафике | `cache.sweep_interval_s` не больше TTL | протухшие записи не удаляются сами: 20 000 таких строк — лукап 13.5 мс вместо 3.6 |
+| has a normal p95 of X | `hedging.delay_ms` ≈ X | below X you duplicate healthy traffic and p95 rises |
+| has a concurrency quota N | `providers.<name>.max_concurrent: N` and **no hedging** on that route | a cancelled duplicate frees a slot on your side, not on the provider's |
+| is ordered cheap to expensive | remember that hedging shifts traffic to the next hop | on the `slow` profile it costs ×8.6 per answer |
+| sends `Retry-After` | `circuit_breaker.retry_after_is_backpressure: true` | otherwise a busy provider looks dead |
+| has a known capacity | `rate_limit.requests_per_second` from it | a refusal in 16 ms beats a 12 s timeout |
+| runs on more than one replica | `RATE_LIMIT_SCOPE=shared` and `BUDGET_SCOPE=shared` | otherwise each replica grants a full limit |
+| returns long answers | `budget.estimate_output_tokens` with headroom | an estimate is reserved and the actual is paid: too low overspends, too high under-uses the limit |
+| has a short `cache.ttl_s` and dense traffic | `cache.sweep_interval_s` no larger than the TTL | expired rows are not removed by themselves; 20,000 of them slow a lookup from 3.6 ms to 13.5 ms |
+| runs on a CPU-bound local model | `config/extras/live_local.yaml` | long timeouts, no hedging, a small concurrency limit |
 
-### Структура репозитория
+## A one-minute demo
 
-```
-src/llm_gateway/     шлюз: роутинг, адаптеры провайдеров, надёжность, БД, бюджет
-src/mock_provider/   мок-провайдер: три диалекта API, профили отказов
-src/chaos/           хаос-харнесс и генератор таблиц отчёта
-config/              gateway.yaml, failure_profiles.yaml, оверлеи итераций и ablation
-bench/results/       результаты всех прогонов (JSON), из них собран RELIABILITY.md
-migrations/          Alembic; применяются автоматически при старте шлюза
-scripts/             стенд без Docker, воспроизведение отчёта, ablation, CI-смоук
-ops/                 дашборд Grafana под метрики шлюза
+Everything on screen comes from this repository. Prepare once, off camera:
+
+```bash
+OLLAMA_ENABLED=true GATEWAY_CONFIG_OVERLAY=config/extras/live_local.yaml \
+  docker compose --profile ollama --profile observability up -d --build
+until curl -sf localhost:8080/readyz >/dev/null; do sleep 2; done
 ```
 
----
+Open <http://127.0.0.1:3000> (the `llm-gateway` dashboard is the home page) and a
+terminal next to it.
+
+| time | do | show |
+|---|---|---|
+| 0:00 | `docker compose --profile ollama --profile observability ps` | everything is up and healthy |
+| 0:08 | `python loadtest/run.py --target live --scenario kill --duration 40` | start load on the real model; in Grafana, *Requests by outcome* and the p50/p95/p99 panel move |
+| 0:28 | *(the runner stops the first Ollama server by itself at 20 s)* | *Provider calls by outcome* switches from `ollama` to `ollama_secondary`, *Circuit breaker state* for `ollama` goes to 2, and the success rate stays at 100% |
+| 0:48 | `curl -si localhost:8080/v1/chat/completions -H 'content-type: application/json' -d '{"model":"auto","messages":[{"role":"user","content":"What is 15% of 240? End with Answer: <number>"}]}' \| grep -i '^x-gateway-\(route\|model\)'` | the router sent a hard question to the 3B model, and says why |
+| 0:55 | the same command with `"What is the capital of Australia?"` | the small model, `score=0`; *Routing decisions* in Grafana shows both tiers |
+
+After the take: `docker compose --profile ollama start ollama` brings the stopped
+server back.
 
 ## API
 
-| endpoint | зачем | ключ |
+| endpoint | purpose | key |
 |---|---|---|
-| `POST /v1/chat/completions` | OpenAI-совместимый запрос; поле `model` — это **маршрут** из конфига, `"cache": true` — согласие на ответ из кэша | да |
-| `GET /v1/usage` | сводка расходов за период: `?from=&to=&group_by=provider\|model\|route\|api_key\|day` | да |
-| `GET /v1/reliability/state` | состояние circuit breaker'ов, статистика кэша, бюджет | да |
-| `POST /v1/reliability/reset` | сброс брейкеров (и кэша с `?cache=true`) между прогонами | да |
-| `GET /v1/config` | эффективная конфигурация надёжности без секретов | нет |
-| `GET /metrics` | метрики в формате Prometheus | нет |
-| `GET /healthz`, `GET /readyz` | живость и готовность (проверка БД) | нет |
+| `POST /v1/chat/completions` | OpenAI-compatible request. `model` is a **route** from the config, or `auto`; `"cache": true` opts in to cached answers | yes |
+| `GET /v1/usage` | spend for the period: `?from=&to=&group_by=provider\|model\|route\|api_key\|day` | yes |
+| `GET /v1/reliability/state` | breaker states, cache statistics, budget | yes |
+| `POST /v1/reliability/reset` | reset breakers (and the cache with `?cache=true`) between runs | yes |
+| `GET /v1/config` | effective reliability config, no secrets | no |
+| `GET /metrics` | Prometheus metrics | no |
+| `GET /healthz`, `GET /readyz` | liveness and readiness (checks the database) | no |
 
-Колонка «ключ» действует, только когда в `auth.keys` что-то есть; по умолчанию
-ключей нет и аутентификация выключена целиком. Граница проведена не по «служебное
-или нет», а по тому, что endpoint делает: `/v1/reliability/state` отдаёт расход по
-ключам — это данные арендатора, а `reset?cache=true` удаляет весь кэш, после чего
-каждый следующий запрос уходит к платному провайдеру. Открытый счётчик и открытая
-кнопка «сделать дорого» — разные риски. Скрейпер Prometheus при этом не арендатор,
-и `/metrics` остаётся за сетевой политикой, а не за ключом.
+The *key* column applies only when `auth.keys` is non-empty; by default
+authentication is off. The line is drawn by what an endpoint exposes rather than by
+whether it is operational: `/v1/reliability/state` reveals per-key spend, and
+`reset?cache=true` empties the cache so every following request reaches a paid
+provider. `/metrics` stays behind the network policy, not a key.
 
-Харнесс умеет предъявлять ключ: `python -m chaos.run --api-key ...` или
-`GATEWAY_API_KEY=...`.
-
-Каждый ответ несёт телеметрию в заголовках — по ним харнесс и считает метрики,
-не заглядывая в базу:
+Every response carries its own telemetry in headers, which is how the chaos harness
+and the load test measure without reading the database:
 
 ```
-X-Gateway-Provider: mock_secondary     X-Gateway-Attempts: 2
-X-Gateway-Retries: 0                   X-Gateway-Fallbacks: 1
-X-Gateway-Breaker-Skips: 1             X-Gateway-Hedges: 1
-X-Gateway-Cache: miss                  X-Gateway-Cost-Usd: 0.000512
-X-Gateway-Latency-Ms: 214
+X-Gateway-Route: large-local                    X-Gateway-Provider: ollama
+X-Gateway-Route-Decision: large; score=3; reasons=math(15%):+3
+X-Gateway-Attempts: 1      X-Gateway-Retries: 0       X-Gateway-Fallbacks: 0
+X-Gateway-Breaker-Skips: 0 X-Gateway-Hedges: 0        X-Gateway-Cache: miss
+X-Gateway-Cost-Usd: 0.000000                    X-Gateway-Latency-Ms: 3874
 ```
 
-### Наблюдаемость
+Errors are typed: `429` (provider limit or our own rate limit), `402` (budget
+exhausted), `503` (breaker open, no free slot, or no enabled provider), `504`
+(timeout), `502` (broken provider), `400` (bad request). The body always has
+`error.kind` from one taxonomy, the `request_id` and the number of attempts.
 
-Один и тот же факт о запросе уезжает в три места и не должен расходиться:
-заголовки ответа (их читает хаос-харнесс), Postgres (журнал вызовов и попыток) и
-`/metrics` (Prometheus). Метрики собираются из тех же записей о попытках, что и
-строки в БД, — не из отдельных счётчиков.
+### Observability
+
+The same fact about a request goes to three places and must not disagree: response
+headers, the Postgres log of calls and attempts, and `/metrics`. The metrics are built
+from the same attempt records as the database rows, not from separate counters.
 
 ```bash
-curl -s localhost:8080/metrics | grep -E '^llm_gateway_(requests|provider_calls|cost)'
+curl -s localhost:8080/metrics | grep -E '^llm_gateway_(requests|provider_calls|cost|routing)'
 ```
 
-| метрика | зачем она нужна |
+| metric | what it is for |
 |---|---|
-| `llm_gateway_requests_total{route,outcome}` | доступность по маршрутам |
-| `llm_gateway_request_errors_total{route,kind}` | по какой именно причине отказ |
-| `llm_gateway_request_duration_seconds{route}` | гистограмма с бакетами под этот сервис |
-| `llm_gateway_provider_calls_total{provider,outcome}` | `success`, `error`, `cancelled` (проиграл хеджу), `discarded`, `skipped_breaker` |
-| `llm_gateway_retries_total`, `_fallbacks_total`, `_hedges_total` | сколько работы стоила надёжность |
-| `llm_gateway_cost_usd_total{provider}` | деньги по провайдерам |
-| `llm_gateway_circuit_breaker_state{provider}` | 0 закрыт, 1 half-open, 2 открыт |
-| `llm_gateway_budget_spent_usd` / `_limit_usd` | насколько близко к отказу по бюджету |
-| `llm_gateway_budget_shared` / `_backend_errors` | лимит общий на реплики или по-репличный, и не сорвались ли резервации |
-| `llm_gateway_cache_expired_swept` | застыл на нуле при живом кэше — уборка не работает, таблица только растёт |
-| `llm_gateway_recorder_queue_depth` / `_records_dropped` | не теряется ли журнал вызовов |
+| `llm_gateway_requests_total{route,outcome}` | availability per route |
+| `llm_gateway_request_errors_total{route,kind}` | why requests fail |
+| `llm_gateway_request_duration_seconds{route}` | histogram with buckets chosen for this service |
+| `llm_gateway_provider_calls_total{provider,outcome}` | `success`, `error`, `cancelled` (lost a hedge), `discarded`, `skipped_breaker` |
+| `llm_gateway_routing_decisions_total{tier}` | how many `auto` requests went to the small and the large route |
+| `llm_gateway_retries_total`, `_fallbacks_total`, `_hedges_total` | work created by the reliability mechanisms |
+| `llm_gateway_cost_usd_total{provider}` | money by provider |
+| `llm_gateway_circuit_breaker_state{provider}` | 0 closed, 1 half-open, 2 open |
+| `llm_gateway_budget_spent_usd` / `_limit_usd` | how close the budget is to refusing |
+| `llm_gateway_budget_shared` / `_backend_errors` | whether the limit is shared across replicas and whether reservations are failing |
+| `llm_gateway_cache_expired_swept` | stuck at zero with a live cache means the sweep is broken |
+| `llm_gateway_recorder_queue_depth` / `_records_dropped` | whether the call log is losing records |
 
-Значения-состояния (брейкеры, бюджет, очередь журнала) заполняются в момент
-скрейпа из своих настоящих источников, а не дублируются счётчиками, — тогда им
-нечем разойтись с `/v1/reliability/state`.
+The dashboard in [`ops/grafana-dashboard.json`](ops/grafana-dashboard.json) is
+provisioned by the `observability` profile and can also be imported into any Grafana.
+`LOG_FORMAT=json` switches logs, including the uvicorn access log, to one JSON
+object per line.
 
-Готовый дашборд лежит в [`ops/grafana-dashboard.json`](ops/grafana-dashboard.json)
-— импортируется в Grafana как есть (Dashboards → Import → Upload JSON) и
-показывает доступность, хвост латентности, работу, созданную механизмами
-надёжности, состояние брейкеров и лимитов, расход и бюджет.
-
-`LOG_FORMAT=json` переключает логи на JSON-строки — включая access-лог uvicorn,
-чтобы в одном процессе не было двух форматов. Строка об отказе несёт весь
-контекст запроса:
-
-```json
-{"ts": "2026-08-12T13:06:36.711+00:00", "level": "WARNING", "logger": "llm_gateway.main",
- "message": "request failed: upstream returned 500", "request_id": "f6c8c2f0d60145a9",
- "route": "chaos-default", "error_kind": "server_error", "http_status": 502,
- "attempts": 9, "retries": 6, "fallbacks": 2, "hedges": 0, "latency_ms": 524}
-```
-
-Ошибки типизированы: `429` (лимит провайдера или наш собственный rate limit),
-`402` (исчерпан бюджет), `503` (открыт брейкер / нет свободных слотов / нет
-доступных провайдеров), `504` (таймаут),
-`502` (провайдер сломан), `400` (плохой запрос). Тело всегда содержит
-`error.kind` из единой таксономии, `request_id` и число попыток.
-
----
-
-## Хаос-тесты
+## Chaos testing
 
 ```bash
-scripts/reproduce_report.sh                        # весь отчёт с нуля, ~20 мин
-ONLY=09 scripts/reproduce_report.sh                # перепрогнать одну итерацию
-python -m chaos.run --label my_run --all           # все 11 сценариев
+scripts/reproduce_report.sh                        # the whole report from scratch, ~20 min
+ONLY=09 scripts/reproduce_report.sh                # re-run one iteration
+python -m chaos.run --label my_run --all           # all 11 scenarios
 python -m chaos.run --label my_run --scenario storm --n 300 --concurrency 20
-python -m chaos.report                             # пересобрать таблицы в RELIABILITY.md
-scripts/run_ablations.sh                           # выключить по одному механизму
+python -m chaos.report                             # rebuild the tables in RELIABILITY.md
+scripts/run_ablations.sh                           # switch mechanisms off one at a time
 ```
 
-`reproduce_report.sh` перезаписывает `bench/results` — в этом и смысл. Чтобы
-проверить сам скрипт, не трогая замеры:
-`OUT=/tmp/probe N=10 SETTLE=0 scripts/reproduce_report.sh`.
+`reproduce_report.sh` overwrites `bench/results`; that is its purpose. To test the
+script without touching the measurements: `OUT=/tmp/probe N=10 SETTLE=0
+scripts/reproduce_report.sh`.
 
-Профили отказов и сценарии задаются в `config/failure_profiles.yaml` — код мока
-знает только *как* ломаться, но не *когда*. Инъекция детерминирована: колода
-исходов засеяна от `(seed, upstream, profile)`, поэтому повторный прогон даёт те
-же доли исходов.
+Failure profiles and scenarios are defined in `config/failure_profiles.yaml`; the mock
+knows *how* to fail, not *when*. Injection is deterministic: the deck of outcomes is
+seeded from `(seed, upstream, profile)`, so a re-run gives the same proportions.
 
-Порог семантического режима кэша выбран замером, а не на глаз — и тот же скрипт
-показывает, почему на хеш-эмбеддере этот режим запрещён по умолчанию: у него
-максимальная похожесть двух *разных* вопросов почти совпадает с минимальной
-похожестью двух формулировок одного:
+## Development
 
 ```bash
-python scripts/calibrate_cache_threshold.py
-```
-
----
-
-## Разработка
-
-```bash
-make install     # venv + зависимости (uv)
-make test        # pytest: юнит + end-to-end через ASGI против мока в процессе
-make lint        # ruff check + ruff format --check + mypy
+make install     # venv and dependencies (uv)
+make test        # pytest: unit plus end-to-end through ASGI against an in-process mock
+make lint        # ruff check, ruff format --check, mypy
 make bench LABEL=my_run
-make report
 ```
 
-Тестам нужен PostgreSQL с `pgvector`; тесты, которым он нужен, сами
-пропускаются, если базы нет (`TEST_DATABASE_URL`, по умолчанию
-`llm_gateway_test`). End-to-end тесты подключают шлюз к мок-провайдеру через
-ASGI-транспорт — весь путь запроса настоящий, но без сети и без ключей.
+The tests need PostgreSQL with `pgvector`. Tests that need it **skip themselves when
+the database is missing** (`TEST_DATABASE_URL`, default `llm_gateway_test`), so a
+green run without Postgres is not the whole suite: CI runs it with a Postgres
+service. End-to-end tests connect the gateway to the mock through an ASGI transport,
+so the whole request path is real, without a network and without keys.
 
-CI (GitHub Actions) гоняет линтеры, тесты с сервисным Postgres, валидацию
-`docker compose config` и короткий хаос-прогон с проверкой инвариантов:
-`healthy` = 100%, `total_outage` = 0% и быстрый отказ, клиентский и серверный
-учёт расходов совпадают.
-
----
-
-## Что осознанно не сделано
-
-- **Стриминга нет.** Ретраи и fallback после отдачи первых токенов — отдельная
-  задача с другой моделью ошибок; в отчёте это только запутало бы метрики.
-- **Точного «ни центом больше» нет.** С `BUDGET_SCOPE=shared` бюджет резервируется в
-  Postgres до вызова провайдера, и число реплик перестаёт влиять на результат
-  (замер: +107.9% → +5.6%). Но резервируется *оценка* стоимости, а платится факт,
-  поэтому остаточный перерасход — «запросов в полёте × ошибка оценки». Убрать его
-  до нуля можно только консервативной оценкой, ценой недоиспользования лимита
-  (замерено: −44.2%), или пост-биллингом, которого у провайдеров в реальном
-  времени нет.
-- **Смыслового кэша по умолчанию нет.** Хеш-эмбеддер видит слова, а не смысл, и на
-  реальном трафике отдал бы ответ про Францию на вопрос про Испанию, поэтому по
-  умолчанию кэш сопоставляет вопрос точно (после нормализации) и только для клиентов,
-  передавших `"cache": true`, в пределах их API-ключа и контекста. Семантический режим
-  на хеш-эмбеддере конфиг отвергает при загрузке; с эмбеддингами Ollama он доступен,
-  порог нужно калибровать заново. Цифры кэша в RELIABILITY.md получены в лексическом
-  режиме на контролируемом воркладе.
-- **Отчёт построен на моке**, а не на живых провайдерах — ради детерминизма.
-  Живой провайдер проверяется отдельным смоук-тестом.
+```
+src/llm_gateway/     the gateway: routing, provider adapters, reliability, database, budget
+src/mock_provider/   the mock: three API dialects, failure profiles
+src/chaos/           chaos harness and the report table generator
+eval/                cache and routing evals, datasets, README table generator
+loadtest/            Locust scenario and the runner that writes reports/
+eval.py              runs every measurement and rebuilds the README table
+config/              gateway.yaml, failure profiles, iteration, ablation and extra overlays
+bench/results/       chaos benchmark results (JSON); RELIABILITY.md is built from them
+reports/             eval and load-test results (JSON)
+migrations/          Alembic, applied automatically on startup
+scripts/             native stack, report reproduction, ablations, CI smoke run
+ops/                 Prometheus config, Grafana provisioning and dashboard
+```
