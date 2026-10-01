@@ -362,3 +362,53 @@ async def test_a_database_blip_is_visible_in_the_snapshot() -> None:
         await nowhere.aclose()
 
     assert budget.snapshot().backend_errors > 0
+
+
+async def test_a_burst_of_http_requests_cannot_overspend_a_local_budget(stack) -> None:  # type: ignore[no-untyped-def]
+    """The same invariant as above, through the real request path.
+
+    Twenty clients ask at once; the provider calls are held in flight until every
+    request has reserved, so each one decides against the others' estimates and not
+    against a total that is already settled.
+    """
+    from llm_gateway.cost import compute_cost_usd, estimate_tokens
+
+    state, client = stack["state"], stack["client"]
+    prompt = "Explain what a database index is."
+    request = {"messages": [{"role": "user", "content": prompt}], "max_tokens": 1000}
+    estimate = compute_cost_usd(
+        state.settings.pricing,
+        "mock_primary",
+        "mock-gpt-4o-mini",
+        estimate_tokens(f"user: {prompt}"),
+        1000,
+    )
+    state.budget._config.limit_usd = estimate * 5.5  # noqa: SLF001
+    assert estimate > 0
+
+    burst = 20
+    reserved = 0
+    everyone_reserved = asyncio.Event()
+    reserve, settle = state.budget.reserve, state.budget.settle
+
+    async def counting_reserve(*args, **kwargs):  # type: ignore[no-untyped-def]
+        nonlocal reserved
+        try:
+            return await reserve(*args, **kwargs)
+        finally:
+            reserved += 1
+            if reserved == burst:
+                everyone_reserved.set()
+
+    async def gated_settle(*args, **kwargs):  # type: ignore[no-untyped-def]
+        await everyone_reserved.wait()
+        return await settle(*args, **kwargs)
+
+    state.budget.reserve, state.budget.settle = counting_reserve, gated_settle
+    responses = await asyncio.wait_for(
+        asyncio.gather(*(client.post("/v1/chat/completions", json=request) for _ in range(burst))),
+        timeout=30,
+    )
+    statuses = sorted(r.status_code for r in responses)
+    assert statuses.count(200) == 5, statuses
+    assert statuses.count(402) == burst - 5, statuses
