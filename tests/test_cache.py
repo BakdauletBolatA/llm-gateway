@@ -406,3 +406,17 @@ async def test_the_sweeper_is_off_when_the_interval_is_zero(cache_stack: dict[st
     cache.config = cache.config.model_copy(update={"sweep_interval_s": 0.0})
     cache.start_sweeper()
     assert cache.stats()["sweeping"] is False
+
+
+def test_the_default_threshold_is_the_one_the_eval_recommends() -> None:
+    import json
+    from pathlib import Path
+
+    report = json.loads(Path("reports/cache_eval_sentence-transformers.json").read_text())
+    five_percent = next(r for r in report["recommendations"] if r["max_false_hit_rate"] == 0.05)
+    assert CacheConfig().similarity_threshold == five_percent["threshold"]
+
+
+def test_semantic_matching_is_allowed_on_a_real_embedder() -> None:
+    config = CacheConfig(enabled=True, match="semantic", embedder="sentence-transformers")
+    assert config.embedder == "sentence-transformers"

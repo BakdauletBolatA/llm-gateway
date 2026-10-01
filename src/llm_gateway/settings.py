@@ -145,6 +145,9 @@ class CacheConfig(ConfigModel):
     #: Кэш обслуживает только запросы, где клиент явно передал "cache": true.
     #: Ответ на чужой вопрос хуже промаха, поэтому по умолчанию согласие не предполагается.
     require_opt_in: bool = True
+    #: 0.93 — порог из eval/cache_eval.py для MiniLM при допуске 5% ложных попаданий:
+    #: hit rate 12.9%, 1 ложное попадание из 30 пар отложенной выборки. Безопасного
+    #: порога нет: пары «enable/disable» и «C->F / F->C» дают 0.93-0.995.
     similarity_threshold: float = Field(default=0.93, gt=0.0, le=1.0)
     ttl_s: int = Field(default=900, ge=1)
     max_temperature: float = 0.3
