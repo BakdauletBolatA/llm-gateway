@@ -303,33 +303,37 @@ re-deriving them:
 | has a short `cache.ttl_s` and dense traffic | `cache.sweep_interval_s` no larger than the TTL | expired rows are not removed by themselves; 20,000 of them slow a lookup from 3.6 ms to 13.5 ms |
 | runs on a CPU-bound local model | `config/extras/live_local.yaml` | long timeouts, no hedging, a small concurrency limit |
 
-## A one-minute demo
+## See it work
 
-Everything on screen comes from this repository. Prepare once, off camera:
+Start the stack with a live model and the dashboard (`--build` matters: a stale image
+answers with the old routing rules), then open <http://127.0.0.1:3000>:
 
 ```bash
 OLLAMA_ENABLED=true GATEWAY_CONFIG_OVERLAY=config/extras/live_local.yaml \
   docker compose --profile ollama --profile observability up -d --build
-until curl -sf localhost:8080/readyz >/dev/null; do sleep 2; done
 ```
 
-Open <http://127.0.0.1:3000> (the `llm-gateway` dashboard is the home page) and a
-terminal next to it.
+**Failover.** Run load and let the runner stop the first Ollama server halfway
+(`docker compose --profile ollama start ollama` brings it back):
 
-| time | do | show |
-|---|---|---|
-| 0:00 | `docker compose --profile ollama --profile observability ps` | everything is up and healthy |
-| 0:08 | `python loadtest/run.py --target live --scenario kill --duration 40` | start load on the real model; in Grafana, *Requests by outcome* and the p50/p95/p99 panel move |
-| 0:28 | *(the runner stops the first Ollama server by itself at 20 s)* | *Provider calls by outcome* switches from `ollama` to `ollama_secondary`, *Circuit breaker state* for `ollama` goes to 2, and the success rate stays at 100% |
-| 0:48 | `curl -si localhost:8080/v1/chat/completions -H 'content-type: application/json' -d '{"model":"auto","messages":[{"role":"user","content":"What is 15% of 240? End with Answer: <number>"}]}' \| grep -i '^x-gateway-\(route\|model\)'` | the router sent a hard question to the 3B model, and says why |
-| 0:55 | the same command with `"What is the capital of Australia?"` | the small model, `score=0`; *Routing decisions* in Grafana shows both tiers |
+```bash
+python loadtest/run.py --target live --scenario kill --duration 40
+```
 
-The Grafana panel titles are in Russian; the metric names under them are not. Run the
-demo on an otherwise idle machine: the live model is CPU-bound, and a busy laptop makes
-it several times slower (see the limits above). After the take,
-`docker compose --profile ollama start ollama` brings the stopped server back. If you
-changed the code since the last build, keep `--build` in the prepare step: a stale
-image answers with the old routing rules.
+In Grafana, *Circuit breaker state* for `ollama` goes to 2, *Provider calls by outcome*
+moves from `ollama` to `ollama_secondary`, and the success rate stays at 100%.
+
+**Routing.** The decision and its reasons come back in the headers:
+
+```bash
+curl -si localhost:8080/v1/chat/completions -H 'content-type: application/json' \
+  -d '{"model":"auto","messages":[{"role":"user","content":"What is 15% of 240? End with Answer: <number>"}]}' \
+  | grep -i '^x-gateway-\(route\|model\)'
+```
+
+A hard question goes to the 3B model; `What is the capital of Australia?` goes to the
+0.5B one with `score=0`. Grafana panel titles are in Russian, the metric names are not.
+Run this on an otherwise idle machine: the live model is CPU-bound.
 
 ## API
 
