@@ -118,3 +118,46 @@ def test_aggregating_nothing_is_an_error() -> None:
 
     with pytest.raises(ValueError, match="no runs"):
         aggregate_runs([])
+
+
+def test_the_killed_provider_is_taken_from_the_scenario_not_guessed_from_traffic() -> None:
+    """Under a slow backend the traffic before the kill can be split evenly."""
+    before = [
+        rec(1.0, 100.0, provider="primary"),
+        rec(2.0, 100.0, provider="secondary"),
+        rec(3.0, 100.0, provider="secondary"),
+    ]
+    after = [rec(6.0, 400.0, provider="secondary")]
+    guessed = summarise(before + after, duration_s=8.0, kill_at_s=4.0)
+    assert guessed["failover"]["provider_killed"] == "secondary"  # the old guess, wrong here
+    told = summarise(before + after, duration_s=8.0, kill_at_s=4.0, killed_provider="primary")
+    assert told["failover"]["provider_killed"] == "primary"
+    assert told["failover"]["seconds_to_first_success_from_other_provider"] == 2.0
+
+
+def test_failover_is_marked_as_exercised_when_another_provider_answered_after_the_kill() -> None:
+    records = [rec(1.0, 100.0, provider="primary"), rec(6.0, 400.0, provider="secondary")]
+    failover = summarise(records, duration_s=8.0, kill_at_s=4.0, killed_provider="primary")[
+        "failover"
+    ]
+    assert failover["exercised"] is True
+    assert "note" not in failover
+
+
+def test_a_run_where_nothing_completed_after_the_kill_says_it_proved_nothing() -> None:
+    records = [rec(1.0, 16000.0, provider="primary"), rec(2.0, 20000.0, provider="secondary")]
+    failover = summarise(records, duration_s=8.0, kill_at_s=4.0, killed_provider="primary")[
+        "failover"
+    ]
+    assert failover["exercised"] is False
+    assert failover["seconds_to_first_success_from_other_provider"] is None
+    assert "not observed" in failover["note"]
+
+
+def test_only_failures_after_the_kill_do_not_count_as_failover() -> None:
+    records = [rec(1.0, 100.0, provider="primary"), rec(6.0, 9000.0, status=502, provider=None)]
+    failover = summarise(records, duration_s=8.0, kill_at_s=4.0, killed_provider="primary")[
+        "failover"
+    ]
+    assert failover["exercised"] is False
+    assert failover["failed_requests_after_kill"] == 1

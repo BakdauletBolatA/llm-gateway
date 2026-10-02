@@ -35,9 +35,18 @@ def _window(records: list[dict[str, Any]], seconds: float) -> dict[str, Any]:
 
 
 def summarise(
-    records: list[dict[str, Any]], *, duration_s: float, kill_at_s: float | None = None
+    records: list[dict[str, Any]],
+    *,
+    duration_s: float,
+    kill_at_s: float | None = None,
+    killed_provider: str | None = None,
 ) -> dict[str, Any]:
-    """`t` is seconds since the run started; `kill_at_s` is when the backend was killed."""
+    """`t` is seconds since the run started; `kill_at_s` is when the backend was killed.
+
+    `killed_provider` is the provider the scenario stopped. When it is not given it is
+    guessed as the one that answered most before the kill, which is wrong whenever a
+    slow backend splits the traffic.
+    """
     ok = [r for r in records if r["status"] == 200]
     result: dict[str, Any] = {
         "requests": len(records),
@@ -56,11 +65,14 @@ def summarise(
     result["before_kill"] = _window(before, kill_at_s)
     result["after_kill"] = _window(after, duration_s - kill_at_s)
 
-    primary = max(
-        Counter(r["provider"] for r in before if r["status"] == 200 and r["provider"]).items(),
-        key=lambda item: item[1],
-        default=(None, 0),
-    )[0]
+    primary = (
+        killed_provider
+        or max(
+            Counter(r["provider"] for r in before if r["status"] == 200 and r["provider"]).items(),
+            key=lambda item: item[1],
+            default=(None, 0),
+        )[0]
+    )
     first_other = next(
         (
             r["t"]
@@ -75,7 +87,13 @@ def summarise(
         "seconds_to_first_success_from_other_provider": (
             round(first_other - kill_at_s, 1) if first_other is not None else None
         ),
+        "exercised": first_other is not None,
     }
+    if first_other is None:
+        result["failover"]["note"] = (
+            "failover not observed: no other provider answered a request sent after the kill, "
+            "so this run says nothing about it (the backend was probably too slow)"
+        )
     return result
 
 
