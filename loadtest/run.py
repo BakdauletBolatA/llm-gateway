@@ -41,6 +41,8 @@ from summarise import aggregate_runs, summarise  # noqa: E402
 
 REPORTS = ROOT / "reports"
 ROUTES = {"mock": "mock-two-hop", "live": "live-local"}
+#: The provider each target's kill stops, as the gateway names it in X-Gateway-Provider.
+KILLED_PROVIDER = {"mock": "mock_primary", "live": "ollama"}
 
 
 def git_sha() -> str:
@@ -159,7 +161,12 @@ def run_once(args: argparse.Namespace) -> dict[str, Any]:
     duration_s = time.time() - started
 
     records = [json.loads(line) for line in raw.read_text().splitlines() if line.strip()]
-    summary = summarise(records, duration_s=duration_s, kill_at_s=kill_at_s)
+    summary = summarise(
+        records,
+        duration_s=duration_s,
+        kill_at_s=kill_at_s,
+        killed_provider=KILLED_PROVIDER[args.target],
+    )
     report = {
         "target": args.target,
         "scenario": args.scenario,
@@ -180,6 +187,12 @@ def run_once(args: argparse.Namespace) -> dict[str, Any]:
         "results": summary,
     }
     return report
+
+
+def _warn_if_unproven(results: dict[str, Any], prefix: str = "") -> None:
+    note = results.get("failover", {}).get("note")
+    if note:
+        print(f"\nWARNING {prefix}{note}", flush=True)
 
 
 def main() -> int:
@@ -218,6 +231,7 @@ def _main(args: argparse.Namespace) -> int:
         path = args.out / f"loadtest_{args.target}_{args.scenario}.json"
         path.write_text(json.dumps(report, indent=2) + "\n")
         print(json.dumps(report["results"], indent=2))
+        _warn_if_unproven(report["results"])
     else:
         reports = []
         for index in range(args.repeat):
@@ -254,6 +268,8 @@ def _main(args: argparse.Namespace) -> int:
         path = args.out / f"loadtest_{args.target}_{args.scenario}_repeats.json"
         path.write_text(json.dumps(report, indent=2) + "\n")
         print(json.dumps(report["aggregate"], indent=2))
+        for index, run in enumerate(reports, 1):
+            _warn_if_unproven(run["results"], f"run {index}: ")
     print(f"wrote {path.relative_to(ROOT) if path.is_relative_to(ROOT) else path}")
     return 0
 
