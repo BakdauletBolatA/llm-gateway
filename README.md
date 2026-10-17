@@ -16,6 +16,8 @@ repository, and a test fails if the README drifts from them.
 > The long-form report, [RELIABILITY.md](RELIABILITY.md), is written in Russian. Its
 > tables are generated from `bench/results` and checked by tests.
 
+![Headline results: success rate, p95 under a failure storm, budget overrun](docs/img/summary.png)
+
 ## The problem
 
 An application that calls one LLM provider inherits that provider's bad days:
@@ -148,6 +150,18 @@ python eval.py --check                # verify this table matches reports/
 [`eval/readme_table.py`](eval/readme_table.py). The chaos benchmark has its own
 script, [`scripts/reproduce_report.sh`](scripts/reproduce_report.sh) (about 20
 minutes).
+
+The two charts below are drawn from `bench/results` by
+[`scripts/make_charts.py`](scripts/make_charts.py) (`pip install -e ".[charts]"`),
+so they change when the benchmark does. Success rate per build: the circuit breaker
+on its own lowers availability, and only pays off together with fallback.
+
+![Success rate across 11 failure scenarios, one mechanism added per build](docs/img/success_by_iteration.png)
+
+p95 latency of the naive gateway against the final build on three failure profiles
+(log scale):
+
+![p95 latency, naive gateway vs final build](docs/img/p95_latency.png)
 
 <!-- results:start -->
 
