@@ -28,6 +28,7 @@ dev = [
 
 embeddings = ["sentence-transformers>=3.0"]
 loadtest = ["locust>=2.29"]
+charts = ["matplotlib>=3.8"]
 
 [build-system]
 requires = ["hatchling"]

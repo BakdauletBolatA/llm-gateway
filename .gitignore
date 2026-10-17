@@ -15,3 +15,6 @@ htmlcov/
 .pgdata/
 .run/
 bench/ci/
+
+# Working files for LinkedIn media, not part of the project
+linkedin-media/
